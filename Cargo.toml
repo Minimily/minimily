@@ -1,7 +1,10 @@
 [package]
-name = "Minimily"
+name = "minimily"
 version = "0.1.0"
 authors = ["Hildeberto Mendonca <me@hildeberto.com>"]
 edition = "2024"
 
 [dependencies]
+dotenv = "0.15.0"
+
+serde = {version = "1.0.228", features = ["derive"]}
