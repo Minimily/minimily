@@ -1,6 +1,7 @@
 use env_logger::Env;
 use sqlx::{migrate, PgPool};
 use minimily::config::{load_config, Config};
+use minimily::server::{AppState, Server};
 
 #[tokio::main]
 async fn main() {
@@ -21,7 +22,9 @@ async fn main() {
 
     migrate_database(&pool).await;
 
-    log::info!("Port: {}", config.server_port);
+    let state = AppState::new(pool);
+    let server = Server::new(config.server_port);
+    server.run(state).await.expect("Error running server");
 }
 
 async fn get_pool(config: &Config) -> Result<PgPool, sqlx::Error> {
