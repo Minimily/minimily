@@ -1,7 +1,20 @@
+#[macro_use]
+extern crate lazy_static;
+
 use env_logger::Env;
 use sqlx::{migrate, PgPool};
+use tera::Tera;
 use minimily::config::{load_config, Config};
-use minimily::server::{AppState, Server};
+use minimily::model::AppState;
+use minimily::server::{Server};
+use minimily::template;
+
+// Ensures template compilation happens only once.
+lazy_static! {
+    pub static ref TEMPLATES: Tera = {
+       template::preload_templates()
+    };
+}
 
 #[tokio::main]
 async fn main() {
@@ -22,7 +35,7 @@ async fn main() {
 
     migrate_database(&pool).await;
 
-    let state = AppState::new(pool);
+    let state = AppState::new(pool, TEMPLATES.clone());
     let server = Server::new(config.server_port);
     server.run(state).await.expect("Error running server");
 }
