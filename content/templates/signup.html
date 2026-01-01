@@ -1,0 +1,80 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h1 class="display-6">Sign Up</h1>
+
+<div class="card">
+    <div class="card-body">
+        <form id="signup-form" method="post" action="/signup" enctype="application/x-www-form-urlencoded">
+            {% if error %}
+                <div class="alert alert-warning" role="alert">
+                    {{ error }}
+                </div>
+            {% endif %}
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="first_name" class="form-label">First Name *</label>
+                        <input type="text" class="form-control" id="first_name" name="first_name" minlength="2" maxlength="30" value="{{ user_account.first_name }}" required>
+                        <span class="error">{{ errors["first_name"] }}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="last_name" class="form-label">Last Name *</label>
+                        <input type="text" class="form-control" id="last_name" name="last_name" minlength="2" maxlength="30" value="{{ user_account.last_name }}" required>
+                        <span class="error">{{ errors["last_name"] }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email *</label>
+                        <input type="email" class="form-control" id="email" name="email" aria-describedby="emailHelp" placeholder="email@example.com" maxlength="100" value="{{ user_account.email }}" required>
+                        <span class="error">{{ errors["email"] }}</span>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="birth_date" class="form-label">Date of Birth</label>
+                        <input type="date" class="form-control" name="birth_date" id="birth_date" value="{{ user_account.birth_date }}">
+                        <br><span class="error">{{ errors["birth_date"] }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password *</label>
+                        <input type="password" class="form-control" id="password" name="password" maxlength="50" value="{{ user_account.password }}" required>
+                        <span class="error">{{ errors["password"] }}</span>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Confirm Password *</label>
+                        <input type="password" class="form-control" name="confirm_password" id="confirm_password" value="{{ user_account.confirm_password }}" required>
+                        <span class="error">{{ errors["confirm_password"] }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                <svg width="1.5em" height="1.5em" viewBox="0 0 16 16" class="bi bi-file-person" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M4 1h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2zm0 1a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H4z"/>
+                    <path d="M13.784 14c-.497-1.27-1.988-3-5.784-3s-5.287 1.73-5.784 3h11.568z"/>
+                    <path fill-rule="evenodd" d="M8 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+                </svg> Sign Up
+            </button>
+            <a class="btn btn-secondary" href="/" role="button">Cancel</a>
+            <br><br><p>Already have an account? <a href="/signin">Sign in</a>.</p>
+        </form>
+    </div>
+</div>
+{% endblock %}
