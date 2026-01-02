@@ -12,6 +12,10 @@ label {
     font-weight: bold;
 }
 
+h1 {
+    padding-bottom: 20px;
+}
+
 .content {
     font-family: "Gafata", sans-serif;
     font-weight: 400;

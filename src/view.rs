@@ -1,7 +1,7 @@
-use actix_web::{web, HttpResponse, Responder};
-use crate::handler::handle_signup;
+use actix_web::{web, HttpResponse, Responder, Either};
+use crate::handler::{handle_signin, handle_signup};
 use crate::model::AppState;
-use crate::form::UserAccountForm;
+use crate::form::{SignInForm, SignUpForm};
 use crate::template;
 use crate::template::respond_with_template;
 
@@ -10,18 +10,35 @@ pub async fn home(state: web::Data<AppState>) -> impl Responder {
     respond_with_template(state, context, "index.html")
 }
 
-pub async fn signup(state: web::Data<AppState>) -> impl Responder {
+pub async fn sign_up(state: web::Data<AppState>) -> impl Responder {
     let context = handle_signup(state.get_ref(), None).await;
     respond_with_template(state, context, "signup.html")
 }
 
-pub async fn signup_post(state: web::Data<AppState>, form: web::Form<UserAccountForm>) -> impl Responder {
+pub async fn sign_up_post(state: web::Data<AppState>, form: web::Form<SignUpForm>) -> impl Responder {
     let context = handle_signup(state.get_ref(), Some(form.into_inner())).await;
-    if context.get("next").is_some() && context.get("next").unwrap() == "signup_ok.html" {
-        return respond_with_template(state, context, "signup_ok.html")
+    if let Some(next_value) = context.get("next") {
+        if let Some(next) = next_value.as_str() {
+            return respond_with_template(state, context.clone(), next)
+        }
     }
 
     respond_with_template(state, context, "signup.html")
+}
+
+pub async fn sign_in(state: web::Data<AppState>) -> impl Responder {
+    let context = handle_signin(state.get_ref(), None).await;
+    respond_with_template(state, context, "signin.html")
+}
+
+pub async fn sign_in_post(state: web::Data<AppState>, form: web::Form<SignInForm>) -> impl Responder {
+    let context = handle_signin(state.get_ref(), Some(form.into_inner())).await;
+    if let Some(redirect_val) = context.get("redirect") {
+        if let Some(redirect) = redirect_val.as_str() {
+            return Either::Left(web::Redirect::to(redirect.to_string()).see_other());
+        }
+    }
+    Either::Right(respond_with_template(state, context.clone(), "signin.html"))
 }
 
 pub async fn robots(state: web::Data<AppState>) -> HttpResponse {

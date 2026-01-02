@@ -5,7 +5,7 @@ use crate::model::{AppState, UserAccount};
 use crate::repository;
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
-pub struct UserAccountForm {
+pub struct SignUpForm {
     pub first_name: String,
     pub last_name: String,
     pub birth_date: Option<String>,
@@ -14,7 +14,7 @@ pub struct UserAccountForm {
     pub confirm_password: Option<String>,
 }
 
-impl UserAccountForm {
+impl SignUpForm {
     pub fn get_errors(&self) -> HashMap<&str, String> {
         HashMap::from([
             ("first_name", "".to_string()),
@@ -100,5 +100,28 @@ impl UserAccountForm {
         };
 
         (user_account, errors)
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct SignInForm {
+    pub email: String,
+    pub password: String,
+}
+
+impl SignInForm {
+    pub async fn validate(&self, state: &AppState) -> (Option<UserAccount>, HashMap<&str, String>) {
+        let user_account = repository::get_user_account_by_email(&state.pool, self.email.clone()).await;
+        match user_account {
+            Ok(ua) => {
+                if bcrypt::verify(self.password.as_str(), ua.password.as_ref().unwrap()).unwrap() {
+                    return (Some(ua), HashMap::new());
+                }
+            },
+            Err(e) => {
+                log::error!("Error getting user by email: {:?}", e);
+            }
+        }
+        (None, HashMap::new())
     }
 }

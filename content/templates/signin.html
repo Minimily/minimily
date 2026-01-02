@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h1 class="display-6">Sign In</h1>
+
+<div class="card">
+    <div class="card-body">
+        <form id="signin-form" method="post" action="/signin" enctype="application/x-www-form-urlencoded">
+            {% if error %}
+            <div class="alert alert-warning" role="alert">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ form.email }}" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" maxlength="50" value="{{ form.password }}" required>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                <svg width="1.5em" height="1.5em" viewBox="0 0 16 16" class="bi bi-file-person" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M4 1h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2zm0 1a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H4z"/>
+                    <path d="M13.784 14c-.497-1.27-1.988-3-5.784-3s-5.287 1.73-5.784 3h11.568z"/>
+                    <path fill-rule="evenodd" d="M8 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+                </svg> Sign In
+            </button>
+            <a class="btn btn-secondary" href="/" role="button">Cancel</a>
+            <br><br><p>You don't have an account yet? <a href="/signup">Sign Up</a> first.</p>
+        </form>
+    </div>
+</div>
+{% endblock %}
