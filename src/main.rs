@@ -16,7 +16,7 @@ lazy_static! {
     };
 }
 
-#[tokio::main]
+#[actix_web::main]
 async fn main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
@@ -36,7 +36,7 @@ async fn main() {
     migrate_database(&pool).await;
 
     let state = AppState::new(pool, TEMPLATES.clone());
-    let server = Server::new(config.server_port);
+    let server = Server::new(config);
     server.run(state).await.expect("Error running server");
 }
 

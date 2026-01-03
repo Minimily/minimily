@@ -1,16 +1,35 @@
 use actix_files as fs;
+use actix_session::SessionMiddleware;
+use actix_session::storage::CookieSessionStore;
 use actix_web::{web, App, HttpServer};
+use actix_web::cookie::Key;
 use actix_web::middleware::Logger;
+use crate::config::Config;
 use crate::model::AppState;
 use crate::view;
 
 pub struct Server {
-    pub port: u16,
+    port: u16,
+    session_secret_key: Key,
+    session_secure: bool,
 }
 
 impl Server {
-    pub fn new(port: u16) -> Self {
-        Server { port }
+    pub fn new(config: Config) -> Self {
+        let session_key = config.session.secrete_key.as_bytes();
+
+        let secret_key = if session_key.len() < 64 {
+            log::warn!("SESSION_SECRET_KEY is too short (min 64 bytes). Generating a temporary random key.");
+            Key::generate()
+        } else {
+            Key::from(session_key)
+        };
+
+        Server {
+            port: config.server_port,
+            session_secret_key: secret_key,
+            session_secure: config.session.secure,
+        }
     }
 
     pub async fn run(&self, state: AppState) -> std::io::Result<()> {
@@ -22,14 +41,26 @@ impl Server {
         * raw copy.
         */
         let app_state = web::Data::new(state);
+        let secret_key = self.session_secret_key.clone();
+        let secure = self.session_secure.clone();
 
         /*
         * actix-web will spin up a worker process for each available core. Each
         * worker runs its own copy of the application.
         */
         HttpServer::new(move || {
+            let worker_key = secret_key.clone();
+            let worker_secure = secure.clone();
+
             App::new()
                 .wrap(Logger::default())
+                .wrap(
+                    SessionMiddleware::builder(CookieSessionStore::default(), worker_key)
+                        .cookie_name("minimily-session".to_string())
+                        .cookie_secure(worker_secure)
+                        .cookie_http_only(true)
+                        .build()
+                )
                 .service(fs::Files::new("/assets", "./content/static/assets").show_files_listing())
                 .route("/", web::get().to(view::home))
                 .route("/signin", web::get().to(view::sign_in))

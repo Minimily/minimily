@@ -1,3 +1,4 @@
+use actix_session::Session;
 use actix_web::{web, HttpResponse};
 use tera::{Context, Tera};
 use crate::model::AppState;
@@ -14,9 +15,10 @@ pub fn preload_templates() -> Tera {
     tera
 }
 
-pub fn create_context(_state: &AppState) -> Context {
+pub fn create_context(session: &Session) -> Context {
     let mut context = Context::new();
     context.insert("error", "");
+    context.insert("session_fullname", &session.get::<String>("full_name").unwrap_or_default());
     context
 }
 

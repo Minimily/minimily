@@ -1,11 +1,9 @@
 use tera::Context;
-use crate::model::AppState;
+use crate::model::{AppState, UserAccount};
 use crate::form::{SignInForm, SignUpForm};
-use crate::{repository, template};
+use crate::{repository};
 
-pub async fn handle_signup(state: &AppState, form: Option<SignUpForm>) -> Context {
-    let mut context = template::create_context(state);
-
+pub async fn handle_sign_up(state: &AppState, form: Option<SignUpForm>, mut context: Context) -> (Context, Option<UserAccount>) {
     match form {
         Some(form) => {
             let (user_account, errors) = &form.validate(state).await;
@@ -15,8 +13,8 @@ pub async fn handle_signup(state: &AppState, form: Option<SignUpForm>) -> Contex
                 Some(user_account) => {
                     let created_account = repository::create_user_account(&state.pool, user_account.clone()).await;
                     match created_account {
-                        Ok(_) => {
-                           context.insert("next", "signup_ok.html");                            
+                        Ok(ca) => {
+                           return (context, Some(ca))
                         }
                         Err(e) => {
                             context.insert("error", &e.to_string());
@@ -48,20 +46,16 @@ pub async fn handle_signup(state: &AppState, form: Option<SignUpForm>) -> Contex
 
     context.insert("confirm_password", "");
 
-    context
+    (context, None)
 }
 
-pub async fn handle_signin(state: &AppState, form: Option<SignInForm>) -> Context {
-    let mut context = template::create_context(state);
-
+pub async fn handle_sign_in(state: &AppState, form: Option<SignInForm>, mut context: Context) -> (Context, Option<UserAccount>) {
     match form {
         Some(form) => {
             let (user_account, _errors) = &form.validate(state).await;
 
             match user_account {
-                Some(_) => {
-                    context.insert("redirect", "/");
-                },
+                Some(ua) => return (context, Some(ua.clone())),
                 None => {
                     context.insert("error", "These credentials don't match your account. Please, try again.");
                     let signin_form = SignInForm { email: form.email.to_string(), password: "".to_string() };
@@ -74,5 +68,6 @@ pub async fn handle_signin(state: &AppState, form: Option<SignInForm>) -> Contex
             context.insert("form", &signin_form);
         },
     }
-    context
+
+    (context, None)
 }

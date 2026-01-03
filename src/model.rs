@@ -24,3 +24,9 @@ pub struct UserAccount {
     pub created: Option<NaiveDateTime>,
     pub modified: Option<NaiveDateTime>,
 }
+
+impl UserAccount {
+    pub fn full_name(&self) -> String {
+        format!("{} {}", self.first_name, self.last_name)
+    }
+}
