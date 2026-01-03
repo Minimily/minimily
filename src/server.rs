@@ -69,7 +69,6 @@ impl Server {
                 .route("/signin", web::post().to(view::sign_in_post))
                 .route("/signout", web::post().to(view::sign_out))
                 .route("/robots.txt", web::get().to(view::robots))
-                .route("/sitemap.xml", web::get().to(view::sitemap))
                 .route("/health", web::get().to(view::health_check))
                 .default_service(web::route().to(view::not_found))
                 .app_data(app_state.clone())

@@ -58,11 +58,6 @@ pub async fn robots(state: web::Data<AppState>, session: Session) -> HttpRespons
     respond_with_template(state, context, "robots.html")
 }
 
-pub async fn sitemap(state: web::Data<AppState>, session: Session) -> HttpResponse {
-    let context = template::create_context(&session);
-    respond_with_template(state, context, "sitemap.html")
-}
-
 pub async fn not_found(state: web::Data<AppState>, session: Session) -> HttpResponse {
     let context = template::create_context(&session);
     respond_with_template(state, context, "404.html")
