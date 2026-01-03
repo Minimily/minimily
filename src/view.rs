@@ -36,7 +36,7 @@ pub async fn sign_in(state: web::Data<AppState>, session: Session) -> impl Respo
 pub async fn sign_in_post(state: web::Data<AppState>, form: web::Form<SignInForm>, session: Session) -> impl Responder {
     let context = template::create_context(&session);
     let (mut context, user_account) = handle_sign_in(state.get_ref(), Some(form.into_inner()), context).await;
-    
+
     match user_account {
         Some(ua) => {
             let _ = session.insert("full_name", ua.full_name());
@@ -44,8 +44,13 @@ pub async fn sign_in_post(state: web::Data<AppState>, form: web::Form<SignInForm
         },
         None => context.insert("error", "These credentials don't match your account. Please, try again."),
     }
-    
+
     Either::Right(respond_with_template(state, context.clone(), "signin.html"))
+}
+
+pub async fn sign_out(session: Session) -> impl Responder {
+    session.purge();
+    web::Redirect::to("/").see_other()
 }
 
 pub async fn robots(state: web::Data<AppState>, session: Session) -> HttpResponse {
