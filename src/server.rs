@@ -68,6 +68,7 @@ impl Server {
                 .route("/signin", web::get().to(view::sign_in))
                 .route("/signin", web::post().to(view::sign_in_post))
                 .route("/signout", web::post().to(view::sign_out))
+                .route("/profile", web::get().to(view::profile))
                 .route("/robots.txt", web::get().to(view::robots))
                 .route("/health", web::get().to(view::health_check))
                 .default_service(web::route().to(view::not_found))

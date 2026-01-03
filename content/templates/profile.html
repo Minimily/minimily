@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="display-6">{{ first_name }} {{ last_name }}</h1>
+
+<div class="card">
+    <div class="card-body">
+        <form id="signup-form" method="post" action="/signup" enctype="application/x-www-form-urlencoded">
+            {% if error %}
+                <div class="alert alert-warning" role="alert">
+                    {{ error }}
+                </div>
+            {% endif %}
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="first_name" class="form-label">First Name</label>
+                        <input type="text" readonly class="form-control-plaintext" id="first_name" name="first_name" minlength="2" maxlength="30" value="{{ first_name }}" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="last_name" class="form-label">Last Name</label>
+                        <input type="text" readonly class="form-control-plaintext" id="last_name" name="last_name" minlength="2" maxlength="30" value="{{ last_name }}" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="text" readonly class="form-control-plaintext" id="email" name="email" aria-describedby="emailHelp" maxlength="100" value="{{ email }}" required>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="birth_date" class="form-label">Date of Birth</label>
+                        <input type="text" readonly class="form-control-plaintext" name="birth_date" id="birth_date" value="{{ birth_date | date(format="%A, %B %e, %Y")  }}">
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
