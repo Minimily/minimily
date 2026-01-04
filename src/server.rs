@@ -73,6 +73,10 @@ impl Server {
                 .route("/health", web::get().to(view::health_check))
                 .default_service(web::route().to(view::not_found))
                 .app_data(app_state.clone())
-        }).bind(("0.0.0.0", self.port))?.run().await
+        })
+            .workers(1)
+            .bind(("0.0.0.0", self.port))?
+            .run()
+            .await
     }
 }

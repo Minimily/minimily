@@ -13,7 +13,7 @@ impl AppState {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
+#[derive(serde::Serialize, Clone)]
 pub struct UserAccount {
     pub id: i32,
     pub first_name: String,
@@ -29,4 +29,58 @@ impl UserAccount {
     pub fn full_name(&self) -> String {
         format!("{} {}", self.first_name, self.last_name)
     }
+    
+    pub fn new_profile(&self) -> Profile {
+        Profile {
+            id: 0,
+            name: self.full_name(),
+            profile_type: ProfileType::UserAccount,
+            user_account: Some(self.clone()),
+            created_by: self.clone(),
+        }
+    }
+}
+
+#[derive(serde::Serialize, Clone)]
+pub struct Profile {
+    pub id: i32,
+    pub name: String,
+    pub profile_type: ProfileType,
+    pub user_account: Option<UserAccount>,
+    pub created_by: UserAccount,
+}
+
+#[derive(serde::Serialize, Clone, sqlx::Type)]
+#[sqlx(type_name = "varchar", rename_all = "lowercase")]
+pub enum ProfileType {
+    UserAccount,
+    Family,
+}
+
+#[derive(serde::Serialize, Clone)]
+pub struct Relationship {
+    pub id: i32,
+    pub profile_from: Profile,
+    pub profile_to: Profile,
+    pub relationship_type: RelationshipType,
+}
+
+#[derive(serde::Serialize, Clone, sqlx::Type)]
+#[sqlx(type_name = "varchar", rename_all = "lowercase")]
+pub enum RelationshipType {
+    FamilyMember,
+    UserAunt,
+    UserDaughter,
+    UserBrother,
+    UserBrotherInLaw,
+    UserCousin,
+    UserFather,
+    UserFriend,
+    UserHusband,
+    UserMother,
+    UserSister,
+    UserSisterInLaw,
+    UserSon,
+    UserUncle,
+    UserWife,
 }

@@ -11,7 +11,10 @@ pub async fn handle_sign_up(state: &AppState, form: Option<SignUpForm>, mut cont
             match user_account {
                 // A user_account was successfully created from a form
                 Some(user_account) => {
-                    let created_account = repository::create_user_account(&state.pool, user_account.clone()).await;
+                    let pool = &state.pool;
+                    let mut tx = pool.begin().await.unwrap();
+                    let created_account = repository::create_user_account(&mut *tx, user_account.clone()).await;
+                    let _ = tx.commit().await;
                     match created_account {
                         Ok(ca) => {
                            return (context, Some(ca))

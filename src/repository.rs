@@ -1,6 +1,6 @@
-use sqlx::{Error, Row};
+use sqlx::{Error, PgConnection, Row};
 use sqlx::postgres::{PgRow, PgPool};
-use crate::model::UserAccount;
+use crate::model::{Profile, Relationship, UserAccount};
 
 pub async fn get_user_account_by_email(conn: &PgPool, email: String) -> Result<UserAccount, Error> {
     sqlx::query("
@@ -23,8 +23,8 @@ pub async fn get_user_account_by_email(conn: &PgPool, email: String) -> Result<U
         .await
 }
 
-pub async fn create_user_account(conn: &PgPool, user_account: UserAccount) -> Result<UserAccount, Error> {
-    sqlx::query("
+pub async fn create_user_account(conn: &mut PgConnection, user_account: UserAccount) -> Result<UserAccount, Error> {
+    let user_account = sqlx::query("
         insert into user_account (first_name, last_name, birth_date, email, password)
         values ($1, $2, $3, $4, $5)
         returning id, created, modified
@@ -43,5 +43,55 @@ pub async fn create_user_account(conn: &PgPool, user_account: UserAccount) -> Re
             password: user_account.password.clone(),
             created: row.get("created"),
             modified: row.get("modified"),
+        }).fetch_one(&mut *conn).await;
+
+    match user_account {
+        Ok(ua) => {
+            let profile = ua.new_profile();
+            create_profile(conn, profile).await?;
+            Ok(ua)
+        },
+        Err(e) => {
+            Err(e)
+        }
+    }
+}
+
+pub async fn create_profile(conn: &mut PgConnection, profile: Profile) -> Result<Profile, Error> {
+    sqlx::query("
+        insert into profile (name, type, user_account, created_by)
+        values ($1, $2, $3, $4)
+        returning id
+    ")
+        .bind(profile.name.clone())
+        .bind(profile.profile_type.clone())
+        .bind(match &profile.user_account {
+            Some(user_account) => Some(user_account.id),
+            None => None
+        })
+        .bind(profile.created_by.id)
+        .map(|row: PgRow| Profile {
+            id: row.get("id"),
+            name: profile.name.clone(),
+            profile_type: profile.profile_type.clone(),
+            user_account: profile.user_account.clone(),
+            created_by: profile.created_by.clone(),
+        }).fetch_one(conn).await
+}
+
+pub async fn create_relationship(conn: &PgPool, relationship: Relationship) -> Result<Relationship, Error> {
+    sqlx::query("
+        insert into relationship (profile_from, profile_to, type)
+        values ($1, $2, $3)
+        returning id
+    ")
+        .bind(relationship.profile_from.id)
+        .bind(relationship.profile_to.id)
+        .bind(relationship.relationship_type.clone())
+        .map(|row: PgRow| Relationship {
+            id: row.get("id"),
+            profile_from: relationship.profile_from.clone(),
+            profile_to: relationship.profile_to.clone(),
+            relationship_type: relationship.relationship_type.clone(),
         }).fetch_one(conn).await
 }
