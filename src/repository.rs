@@ -57,6 +57,30 @@ pub async fn create_user_account(conn: &mut PgConnection, user_account: UserAcco
     }
 }
 
+pub async fn get_family_profile(conn: &PgPool, user_account: UserAccount) -> Result<Profile, Error> {
+    sqlx::query("
+        select p.*
+        from profile p
+        where p.user_account is null
+          and p.created_by = $1
+           or p.id in (select r.profile_to
+                       from relationship r
+                       where r.type = 'familymember'
+                         and r.profile_from = (select id from profile where user_account = $1))
+          and p.type = 'family'
+        ")
+        .bind(user_account.id)
+        .map(|row: PgRow| Profile {
+            id: row.get("id"),
+            name: row.get("name"),
+            profile_type: row.get("type"),
+            user_account: None,
+            created_by: None,
+        })
+        .fetch_one(conn)
+        .await
+}
+
 pub async fn create_profile(conn: &mut PgConnection, profile: Profile) -> Result<Profile, Error> {
     sqlx::query("
         insert into profile (name, type, user_account, created_by)
@@ -69,7 +93,10 @@ pub async fn create_profile(conn: &mut PgConnection, profile: Profile) -> Result
             Some(user_account) => Some(user_account.id),
             None => None
         })
-        .bind(profile.created_by.id)
+        .bind(match &profile.created_by {
+            Some(user_account) => Some(user_account.id),
+            None => None
+        })
         .map(|row: PgRow| Profile {
             id: row.get("id"),
             name: profile.name.clone(),

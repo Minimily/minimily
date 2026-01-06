@@ -29,14 +29,14 @@ impl UserAccount {
     pub fn full_name(&self) -> String {
         format!("{} {}", self.first_name, self.last_name)
     }
-    
+
     pub fn new_profile(&self) -> Profile {
         Profile {
             id: 0,
             name: self.full_name(),
             profile_type: ProfileType::UserAccount,
             user_account: Some(self.clone()),
-            created_by: self.clone(),
+            created_by: Some(self.clone()),
         }
     }
 }
@@ -47,7 +47,7 @@ pub struct Profile {
     pub name: String,
     pub profile_type: ProfileType,
     pub user_account: Option<UserAccount>,
-    pub created_by: UserAccount,
+    pub created_by: Option<UserAccount>,
 }
 
 #[derive(serde::Serialize, Clone, sqlx::Type)]
@@ -65,22 +65,62 @@ pub struct Relationship {
     pub relationship_type: RelationshipType,
 }
 
-#[derive(serde::Serialize, Clone, sqlx::Type)]
+#[derive(serde::Serialize, Clone, Debug, sqlx::Type)]
 #[sqlx(type_name = "varchar", rename_all = "lowercase")]
 pub enum RelationshipType {
     FamilyMember,
-    UserAunt,
-    UserDaughter,
-    UserBrother,
-    UserBrotherInLaw,
-    UserCousin,
-    UserFather,
+    FamilyAunt,
+    FamilyBrother,
+    FamilyBrotherInLaw,
+    FamilyCousin,
+    FamilyDaughter,
+    FamilyFather,
+    FamilyGrandfather,
+    FamilyGrandmother,
+    FamilyGreatGrandfather,
+    FamilyGreatGrandmother,
+    FamilyHusband,
+    FamilyMother,
+    FamilySister,
+    FamilySisterInLaw,
+    FamilySon,
+    FamilyUncle,
+    FamilyWife,
     UserFriend,
-    UserHusband,
-    UserMother,
-    UserSister,
-    UserSisterInLaw,
-    UserSon,
-    UserUncle,
-    UserWife,
+}
+
+impl RelationshipType {
+    pub fn to_string(&self) -> String {
+        let s = format!("{:?}", self);
+        s.replace("Family", "").replace("User", "")
+    }
+
+    pub fn family_entries(&self) -> Vec<String> {
+        vec![
+            RelationshipType::FamilyAunt.to_string(),
+            RelationshipType::FamilyDaughter.to_string(),
+            RelationshipType::FamilyBrother.to_string(),
+            RelationshipType::FamilyCousin.to_string(),
+            RelationshipType::FamilyFather.to_string(),
+            RelationshipType::FamilyHusband.to_string(),
+            RelationshipType::FamilyMother.to_string(),
+            RelationshipType::FamilySister.to_string(),
+            RelationshipType::FamilySon.to_string(),
+            RelationshipType::FamilyUncle.to_string(),
+            RelationshipType::FamilyWife.to_string(),
+        ]
+    }
+}
+
+#[derive(serde::Serialize, Clone)]
+pub struct Family {
+    pub id: i32,
+    pub name: String,
+    pub members: Vec<Relationship>,
+}
+
+pub struct FamilyMember {
+    pub id: i32,
+    pub full_name: String,
+    pub relationship: String,
 }

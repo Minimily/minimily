@@ -41,6 +41,7 @@ pub async fn sign_in_post(state: web::Data<AppState>, form: web::Form<SignInForm
         Some(ua) => {
             let _ = session.insert("full_name", ua.full_name());
             let _ = session.insert("email", ua.email);
+            let _ = session.insert("id", ua.id);
             return Either::Left(web::Redirect::to("/").see_other())
         },
         None => context.insert("error", "These credentials don't match your account. Please, try again."),
@@ -67,6 +68,12 @@ pub async fn profile(state: web::Data<AppState>, session: Session) -> impl Respo
                 context.insert("email", &ua.email);
                 context.insert("created", &ua.created);
                 context.insert("modified", &ua.modified);
+
+                let family = repository::get_family_profile(&state.pool, ua).await;
+                match family {
+                    Ok(f) => context.insert("family", &f),
+                    Err(e) => log::error!("Error retrieving family profile: {}", e)
+                }
             },
             Err(e) => {
                 log::error!("Error retrieving user account: {}", e);

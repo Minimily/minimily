@@ -16,6 +16,11 @@ h1 {
     padding-bottom: 20px;
 }
 
+h2 {
+    padding-top: 20px;
+    padding-bottom: 10px;
+}
+
 .content {
     font-family: "Gafata", sans-serif;
     font-weight: 400;

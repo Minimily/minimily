@@ -47,4 +47,12 @@
         </form>
     </div>
 </div>
+
+{% if family %}
+    <h2>Family</h2>
+
+    <div class="card">
+        <h4 class="card-header">{{ family.name }}</h4>
+    </div>
+{% endif %}
 {% endblock %}
