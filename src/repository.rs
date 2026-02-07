@@ -57,19 +57,44 @@ pub async fn create_user_account(conn: &mut PgConnection, user_account: UserAcco
     }
 }
 
-pub async fn get_family_profile(conn: &PgPool, user_account: UserAccount) -> Result<Profile, Error> {
+pub async fn get_profile(conn: &PgPool, email: String) -> Result<Profile, Error> {
+    sqlx::query("
+        select ua.id as user_id, ua.first_name, ua.last_name, ua.birth_date, ua.email,
+               p.id as profile_id, p.name, p.type
+        from user_account ua
+            join profile p on p.user_account = ua.id
+        where ua.email = $1
+    ")
+        .bind(email)
+        .map(|row: PgRow| Profile {
+            id: row.get("profile_id"),
+            name: row.get("name"),
+            profile_type: row.get("type"),
+            user_account: Some(UserAccount {
+                id: row.get("user_id"),
+                first_name: row.get("first_name"),
+                last_name: row.get("last_name"),
+                birth_date: row.get("birth_date"),
+                email: row.get("email"),
+                password: None,
+                created: None,
+                modified: None,
+            }),
+            created_by: None,
+        })
+        .fetch_one(conn)
+        .await
+}
+
+pub async fn get_family_profile(conn: &PgPool, profile: Profile) -> Result<Profile, Error> {
     sqlx::query("
         select p.*
-        from profile p
-        where p.user_account is null
-          and p.created_by = $1
-           or p.id in (select r.profile_to
-                       from relationship r
-                       where r.type = 'familymember'
-                         and r.profile_from = (select id from profile where user_account = $1))
-          and p.type = 'family'
+        from relationship r
+	        join profile p on p.id = r.profile_to 
+        where r.profile_from  = $1
+	        and r.type = 'familymember'
         ")
-        .bind(user_account.id)
+        .bind(profile.id)
         .map(|row: PgRow| Profile {
             id: row.get("id"),
             name: row.get("name"),

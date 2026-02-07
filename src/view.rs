@@ -59,17 +59,12 @@ pub async fn profile(state: web::Data<AppState>, session: Session) -> impl Respo
     let mut context = template::create_context(&session);
 
     if let Ok(Some(email)) = session.get::<String>("email") {
-        let user_account = repository::get_user_account_by_email(&state.pool, email).await;
-        match user_account {
-            Ok(ua) => {
-                context.insert("first_name", &ua.first_name);
-                context.insert("last_name", &ua.last_name);
-                context.insert("birth_date", &ua.birth_date);
-                context.insert("email", &ua.email);
-                context.insert("created", &ua.created);
-                context.insert("modified", &ua.modified);
+        let profile = repository::get_profile(&state.pool, email).await;
+        match profile {
+            Ok(p) => {
+                context.insert("user_account", &p.user_account);
 
-                let family = repository::get_family_profile(&state.pool, ua).await;
+                let family = repository::get_family_profile(&state.pool, p).await;
                 match family {
                     Ok(f) => context.insert("family", &f),
                     Err(e) => log::error!("Error retrieving family profile: {}", e)
