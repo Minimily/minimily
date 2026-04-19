@@ -1,8 +1,9 @@
 use actix_session::Session;
 use actix_web::{web, HttpResponse, Responder, Either};
+use chrono::NaiveDate;
 use crate::handler::{handle_sign_in, handle_sign_up};
 use crate::model::AppState;
-use crate::form::{SignInForm, SignUpForm};
+use crate::form::{EditProfileForm, SignInForm, SignUpForm};
 use crate::{repository, template};
 use crate::template::respond_with_template;
 
@@ -92,6 +93,72 @@ pub async fn profile(state: web::Data<AppState>, session: Session) -> impl Respo
         return Either::Left(web::Redirect::to("/").see_other())
     }
     Either::Right(respond_with_template(state, context, "profile.html"))
+}
+
+pub async fn profile_edit(state: web::Data<AppState>, session: Session) -> impl Responder {
+    let mut context = template::create_context(&session);
+
+    let session_email = match session.get::<String>("email") {
+        Ok(Some(email)) => email,
+        _ => return Either::Left(web::Redirect::to("/").see_other()),
+    };
+
+    match repository::get_user_account_by_email(&state.pool, session_email).await {
+        Ok(ua) => {
+            let form = EditProfileForm {
+                first_name: ua.first_name,
+                last_name: ua.last_name,
+                birth_date: ua.birth_date.map(|d| d.format("%Y-%m-%d").to_string()),
+                email: ua.email.unwrap_or_default(),
+            };
+            let errors = form.get_errors();
+            context.insert("form", &form);
+            context.insert("errors", &errors);
+        },
+        Err(e) => {
+            log::error!("Error retrieving user account for edit: {}", e);
+            return Either::Left(web::Redirect::to("/").see_other());
+        }
+    }
+
+    Either::Right(respond_with_template(state, context, "profile_edit.html"))
+}
+
+pub async fn profile_edit_post(state: web::Data<AppState>, form: web::Form<EditProfileForm>, session: Session) -> impl Responder {
+    let mut context = template::create_context(&session);
+
+    let user_id = match session.get::<i32>("id") {
+        Ok(Some(id)) => id,
+        _ => return Either::Left(web::Redirect::to("/").see_other()),
+    };
+
+    let form = form.into_inner();
+    let (valid, errors) = form.validate(&state, user_id).await;
+
+    if valid {
+        let birth_date = form.birth_date.as_deref()
+            .filter(|s| !s.is_empty())
+            .and_then(|s| NaiveDate::parse_from_str(s, "%Y-%m-%d").ok());
+
+        match repository::update_user_account(&state.pool, user_id, &form.first_name, &form.last_name, birth_date, &form.email).await {
+            Ok(_) => {
+                let _ = session.insert("full_name", format!("{} {}", form.first_name, form.last_name));
+                let _ = session.insert("email", form.email.clone());
+                return Either::Left(web::Redirect::to("/profile").see_other());
+            },
+            Err(e) => {
+                log::error!("Error updating user account: {}", e);
+                context.insert("error", &e.to_string());
+                context.insert("errors", &errors);
+                context.insert("form", &form);
+            }
+        }
+    } else {
+        context.insert("errors", &errors);
+        context.insert("form", &form);
+    }
+
+    Either::Right(respond_with_template(state, context, "profile_edit.html"))
 }
 
 pub async fn robots(state: web::Data<AppState>, session: Session) -> HttpResponse {

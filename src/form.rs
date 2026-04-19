@@ -103,6 +103,60 @@ impl SignUpForm {
     }
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+pub struct EditProfileForm {
+    pub first_name: String,
+    pub last_name: String,
+    pub birth_date: Option<String>,
+    pub email: String,
+}
+
+impl EditProfileForm {
+    pub fn get_errors(&self) -> HashMap<&str, String> {
+        HashMap::from([
+            ("first_name", "".to_string()),
+            ("last_name", "".to_string()),
+            ("email", "".to_string()),
+            ("birth_date", "".to_string()),
+        ])
+    }
+
+    pub async fn validate(&self, state: &AppState, current_id: i32) -> (bool, HashMap<&str, String>) {
+        let mut errors = self.get_errors();
+        let mut valid = true;
+
+        if self.first_name.is_empty() {
+            errors.insert("first_name", "First name cannot be empty".to_string());
+            valid = false;
+        }
+
+        if self.last_name.is_empty() {
+            errors.insert("last_name", "Last name cannot be empty".to_string());
+            valid = false;
+        }
+
+        if self.email.is_empty() {
+            errors.insert("email", "Email cannot be empty".to_string());
+            valid = false;
+        } else if let Ok(ua) = repository::get_user_account_by_email(&state.pool, self.email.clone()).await {
+            if ua.id != current_id {
+                errors.insert("email", format!("Email {} is already in use", self.email));
+                valid = false;
+            }
+        }
+
+        let birth_date_str = self.birth_date.clone().unwrap_or_default();
+        if !birth_date_str.is_empty() {
+            if NaiveDate::parse_from_str(&birth_date_str, "%Y-%m-%d").is_err() {
+                errors.insert("birth_date", "Invalid date format".to_string());
+                valid = false;
+            }
+        }
+
+        (valid, errors)
+    }
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct SignInForm {
     pub email: String,

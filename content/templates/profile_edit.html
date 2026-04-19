@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="display-6">Edit Profile</h1>
+
+<div class="card">
+    <div class="card-body">
+        <form id="profile-edit-form" method="post" action="/profile/edit" enctype="application/x-www-form-urlencoded">
+            {% if error %}
+                <div class="alert alert-warning" role="alert">
+                    {{ error }}
+                </div>
+            {% endif %}
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="first_name" class="form-label">First Name *</label>
+                        <input type="text" class="form-control" id="first_name" name="first_name" minlength="2" maxlength="30" value="{{ form.first_name }}" required>
+                        <span class="error">{{ errors["first_name"] }}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="last_name" class="form-label">Last Name *</label>
+                        <input type="text" class="form-control" id="last_name" name="last_name" minlength="2" maxlength="30" value="{{ form.last_name }}" required>
+                        <span class="error">{{ errors["last_name"] }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email *</label>
+                        <input type="email" class="form-control" id="email" name="email" maxlength="100" value="{{ form.email }}" required>
+                        <span class="error">{{ errors["email"] }}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="birth_date" class="form-label">Date of Birth</label>
+                        <input type="date" class="form-control" name="birth_date" id="birth_date" value="{{ form.birth_date }}">
+                        <span class="error">{{ errors["birth_date"] }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a class="btn btn-secondary" href="/profile" role="button">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,3 +1,4 @@
+use chrono::NaiveDate;
 use sqlx::{Error, PgConnection, Row};
 use sqlx::postgres::{PgRow, PgPool};
 use crate::model::{Profile, Relationship, UserAccount};
@@ -66,7 +67,7 @@ pub async fn create_user_account(conn: &mut PgConnection, user_account: UserAcco
 
 pub async fn get_profile(conn: &PgPool, email: String) -> Result<Profile, Error> {
     sqlx::query("
-        select ua.id as user_id, ua.first_name, ua.last_name, ua.birth_date, ua.email,
+        select ua.id as user_id, ua.first_name, ua.last_name, ua.birth_date, ua.created, ua.email,
                p.id as profile_id, p.name, p.type
         from user_account ua
             join profile p on p.user_account = ua.id
@@ -84,7 +85,7 @@ pub async fn get_profile(conn: &PgPool, email: String) -> Result<Profile, Error>
                 birth_date: row.get("birth_date"),
                 email: row.get("email"),
                 password: None,
-                created: None,
+                created: row.get("created"),
                 modified: None,
             }),
             created_by: None,
@@ -136,6 +137,33 @@ pub async fn create_profile(conn: &mut PgConnection, profile: Profile) -> Result
             user_account: profile.user_account.clone(),
             created_by: profile.created_by.clone(),
         }).fetch_one(conn).await
+}
+
+pub async fn update_user_account(conn: &PgPool, id: i32, first_name: &str, last_name: &str, birth_date: Option<NaiveDate>, email: &str) -> Result<(), Error> {
+    sqlx::query("
+        update user_account
+        set first_name = $1, last_name = $2, birth_date = $3, email = $4, modified = now()
+        where id = $5
+    ")
+        .bind(first_name)
+        .bind(last_name)
+        .bind(birth_date)
+        .bind(email)
+        .bind(id)
+        .execute(conn)
+        .await?;
+
+    sqlx::query("
+        update profile
+        set name = $1
+        where user_account = $2 and type = 'useraccount'
+    ")
+        .bind(format!("{} {}", first_name, last_name))
+        .bind(id)
+        .execute(conn)
+        .await?;
+
+    Ok(())
 }
 
 pub async fn create_relationship(conn: &PgPool, relationship: Relationship) -> Result<Relationship, Error> {

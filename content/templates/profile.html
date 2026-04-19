@@ -44,7 +44,12 @@
                     </div>
                 {% endif %}
             </div>
+
+            <a href="/profile/edit" class="btn btn-secondary">Edit Profile</a>
         </form>
+    </div>
+    <div class="card-footer">
+        <p class="text-muted mt-2">Minimily's user since {{ user_account.created | date(format="%B %e, %Y") }}</p>
     </div>
 </div>
 
