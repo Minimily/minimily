@@ -2,6 +2,13 @@ use sqlx::{Error, PgConnection, Row};
 use sqlx::postgres::{PgRow, PgPool};
 use crate::model::{Profile, Relationship, UserAccount};
 
+pub async fn num_user_accounts(conn: &PgPool) -> Result<i64, Error> {
+    sqlx::query("select count(id) num from user_account")
+        .map(|row: PgRow| row.get("num"))
+        .fetch_one(conn)
+        .await
+}
+
 pub async fn get_user_account_by_email(conn: &PgPool, email: String) -> Result<UserAccount, Error> {
     sqlx::query("
         select *

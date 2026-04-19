@@ -2,6 +2,12 @@
 
 ## Config
 
+### .env File
+
+```cmd
+$ cp .env.example .env
+```
+
 ### Session Secret Key
 
 #### Entries

@@ -27,10 +27,22 @@ pub async fn sign_up_post(state: web::Data<AppState>, form: web::Form<SignUpForm
     }
 }
 
-pub async fn sign_in(state: web::Data<AppState>, session: Session) -> impl Responder {
+pub async fn sign_in(state: web::Data<AppState>, session: Session) -> Either<web::Redirect, HttpResponse> {
+    let num_user_accounts = match repository::num_user_accounts(&state.pool).await {
+        Ok(num) => num,
+        Err(e) => {
+            log::error!("Error checking the number of user accounts: {}", e);
+            0
+        }
+    };
+
+    if num_user_accounts == 0 {
+        return Either::Left(web::Redirect::to("/signup").see_other());
+    }
+    
     let context = template::create_context(&session);
     let (context, _user_account) = handle_sign_in(state.get_ref(), None, context).await;
-    respond_with_template(state, context, "signin.html")
+    Either::Right(respond_with_template(state, context, "signin.html"))
 }
 
 pub async fn sign_in_post(state: web::Data<AppState>, form: web::Form<SignInForm>, session: Session) -> impl Responder {
