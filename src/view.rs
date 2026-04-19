@@ -110,6 +110,7 @@ pub async fn profile_edit(state: web::Data<AppState>, session: Session) -> impl 
                 last_name: ua.last_name,
                 birth_date: ua.birth_date.map(|d| d.format("%Y-%m-%d").to_string()),
                 email: ua.email.unwrap_or_default(),
+                phone: ua.phone,
             };
             let errors = form.get_errors();
             context.insert("form", &form);
@@ -140,7 +141,8 @@ pub async fn profile_edit_post(state: web::Data<AppState>, form: web::Form<EditP
             .filter(|s| !s.is_empty())
             .and_then(|s| NaiveDate::parse_from_str(s, "%Y-%m-%d").ok());
 
-        match repository::update_user_account(&state.pool, user_id, &form.first_name, &form.last_name, birth_date, &form.email).await {
+        let phone = form.phone.as_deref().filter(|s| !s.is_empty());
+        match repository::update_user_account(&state.pool, user_id, &form.first_name, &form.last_name, birth_date, &form.email, phone).await {
             Ok(_) => {
                 let _ = session.insert("full_name", format!("{} {}", form.first_name, form.last_name));
                 let _ = session.insert("email", form.email.clone());

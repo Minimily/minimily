@@ -23,6 +23,7 @@ pub async fn get_user_account_by_email(conn: &PgPool, email: String) -> Result<U
             last_name: row.get("last_name"),
             birth_date: row.get("birth_date"),
             email: row.get("email"),
+            phone: row.get("phone"),
             password: row.get("password"),
             created: row.get("created"),
             modified: row.get("modified"),
@@ -48,6 +49,7 @@ pub async fn create_user_account(conn: &mut PgConnection, user_account: UserAcco
             last_name: user_account.last_name.clone(),
             birth_date: user_account.birth_date,
             email: user_account.email.clone(),
+            phone: user_account.phone.clone(),
             password: user_account.password.clone(),
             created: row.get("created"),
             modified: row.get("modified"),
@@ -67,7 +69,7 @@ pub async fn create_user_account(conn: &mut PgConnection, user_account: UserAcco
 
 pub async fn get_profile(conn: &PgPool, email: String) -> Result<Profile, Error> {
     sqlx::query("
-        select ua.id as user_id, ua.first_name, ua.last_name, ua.birth_date, ua.created, ua.email,
+        select ua.id as user_id, ua.first_name, ua.last_name, ua.birth_date, ua.created, ua.email, ua.phone,
                p.id as profile_id, p.name, p.type
         from user_account ua
             join profile p on p.user_account = ua.id
@@ -84,6 +86,7 @@ pub async fn get_profile(conn: &PgPool, email: String) -> Result<Profile, Error>
                 last_name: row.get("last_name"),
                 birth_date: row.get("birth_date"),
                 email: row.get("email"),
+                phone: row.get("phone"),
                 password: None,
                 created: row.get("created"),
                 modified: None,
@@ -139,16 +142,17 @@ pub async fn create_profile(conn: &mut PgConnection, profile: Profile) -> Result
         }).fetch_one(conn).await
 }
 
-pub async fn update_user_account(conn: &PgPool, id: i32, first_name: &str, last_name: &str, birth_date: Option<NaiveDate>, email: &str) -> Result<(), Error> {
+pub async fn update_user_account(conn: &PgPool, id: i32, first_name: &str, last_name: &str, birth_date: Option<NaiveDate>, email: &str, phone: Option<&str>) -> Result<(), Error> {
     sqlx::query("
         update user_account
-        set first_name = $1, last_name = $2, birth_date = $3, email = $4, modified = now()
-        where id = $5
+        set first_name = $1, last_name = $2, birth_date = $3, email = $4, phone = $5, modified = now()
+        where id = $6
     ")
         .bind(first_name)
         .bind(last_name)
         .bind(birth_date)
         .bind(email)
+        .bind(phone)
         .bind(id)
         .execute(conn)
         .await?;

@@ -90,6 +90,7 @@ impl SignUpForm {
                 first_name: self.first_name.clone(),
                 last_name: self.last_name.clone(),
                 email: self.email.clone(),
+                phone: None,
                 birth_date,
                 password: Some(hashed_password),
                 created: None,
@@ -109,6 +110,7 @@ pub struct EditProfileForm {
     pub last_name: String,
     pub birth_date: Option<String>,
     pub email: String,
+    pub phone: Option<String>,
 }
 
 impl EditProfileForm {
@@ -118,6 +120,7 @@ impl EditProfileForm {
             ("last_name", "".to_string()),
             ("email", "".to_string()),
             ("birth_date", "".to_string()),
+            ("phone", "".to_string()),
         ])
     }
 

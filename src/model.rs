@@ -20,6 +20,7 @@ pub struct UserAccount {
     pub last_name: String,
     pub birth_date: Option<NaiveDate>,
     pub email: Option<String>,
+    pub phone: Option<String>,
     pub password: Option<String>,
     pub created: Option<NaiveDateTime>,
     pub modified: Option<NaiveDateTime>,

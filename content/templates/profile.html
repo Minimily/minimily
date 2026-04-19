@@ -45,6 +45,17 @@
                 {% endif %}
             </div>
 
+            {% if user_account.phone %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Phone</label>
+                            <input type="text" readonly class="form-control-plaintext" id="phone" name="phone" value="{{ user_account.phone | format_phone }}">
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
             <a href="/profile/edit" class="btn btn-secondary">Edit Profile</a>
         </form>
     </div>

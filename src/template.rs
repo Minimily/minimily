@@ -3,6 +3,17 @@ use actix_web::{web, HttpResponse};
 use tera::{Context, Tera};
 use crate::model::AppState;
 
+fn filter_format_phone(value: &tera::Value, _args: &std::collections::HashMap<String, tera::Value>) -> tera::Result<tera::Value> {
+    let phone = tera::try_get_value!("format_phone", "value", String, value);
+    let digits: String = phone.chars().filter(|c| c.is_ascii_digit()).collect();
+    let formatted = if digits.len() == 10 {
+        format!("({}) {}-{}", &digits[0..3], &digits[3..6], &digits[6..10])
+    } else {
+        phone
+    };
+    Ok(tera::to_value(formatted).unwrap())
+}
+
 pub fn preload_templates() -> Tera {
     let mut tera = match Tera::new("content/templates/**/*.html") {
         Ok(t) => t,
@@ -11,6 +22,7 @@ pub fn preload_templates() -> Tera {
             std::process::exit(1);
         }
     };
+    tera.register_filter("format_phone", filter_format_phone);
     tera.full_reload().expect("Failed to reload templates");
     tera
 }
