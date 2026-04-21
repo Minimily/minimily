@@ -71,6 +71,7 @@ impl Server {
                 .route("/profile", web::get().to(view::profile))
                 .route("/profile/edit", web::get().to(view::profile_edit))
                 .route("/profile/edit", web::post().to(view::profile_edit_post))
+                .route("/profile/family", web::post().to(view::family_create_post))
                 .route("/robots.txt", web::get().to(view::robots))
                 .route("/health", web::get().to(view::health_check))
                 .default_service(web::route().to(view::not_found))

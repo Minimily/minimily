@@ -95,22 +95,6 @@ impl RelationshipType {
         let s = format!("{:?}", self);
         s.replace("Family", "").replace("User", "")
     }
-
-    pub fn family_entries(&self) -> Vec<String> {
-        vec![
-            RelationshipType::FamilyAunt.to_string(),
-            RelationshipType::FamilyDaughter.to_string(),
-            RelationshipType::FamilyBrother.to_string(),
-            RelationshipType::FamilyCousin.to_string(),
-            RelationshipType::FamilyFather.to_string(),
-            RelationshipType::FamilyHusband.to_string(),
-            RelationshipType::FamilyMother.to_string(),
-            RelationshipType::FamilySister.to_string(),
-            RelationshipType::FamilySon.to_string(),
-            RelationshipType::FamilyUncle.to_string(),
-            RelationshipType::FamilyWife.to_string(),
-        ]
-    }
 }
 
 #[derive(serde::Serialize, Clone)]

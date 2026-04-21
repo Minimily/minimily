@@ -160,6 +160,11 @@ impl EditProfileForm {
     }
 }
 
+#[derive(serde::Deserialize)]
+pub struct CreateFamilyForm {
+    pub name: String,
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct SignInForm {
     pub email: String,

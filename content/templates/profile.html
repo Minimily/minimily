@@ -69,6 +69,38 @@
 
     <div class="card">
         <h4 class="card-header">{{ family.name }}</h4>
+
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Relationship</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for family_member in family_members %}
+                    <tr>
+                        <td>{{ family_member.profile_from.name }}</td>
+                        <td>{{ family_member.relationship_type }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% elif no_family %}
+    <h2>Family</h2>
+
+    <div class="card">
+        <div class="card-body">
+            <p class="card-text">You don't have a family yet. Create one to start adding members.</p>
+            <form method="post" action="/profile/family" enctype="application/x-www-form-urlencoded">
+                <div class="mb-3">
+                    <label for="name" class="form-label">Family Name</label>
+                    <input type="text" class="form-control" id="name" name="name" minlength="2" maxlength="100" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Create Family</button>
+            </form>
+        </div>
     </div>
 {% endif %}
 {% endblock %}
