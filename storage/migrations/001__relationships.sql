@@ -1,4 +1,4 @@
-create unique index user_account_email_uidx on user_account (email);
+create unique index if not exists user_account_email_uidx on user_account (email);
 
 create table if not exists profile (
     id           serial       primary key,
@@ -12,7 +12,7 @@ create table if not exists relationship (
     id           serial      primary key,
     profile_from integer     not null,
     profile_to   integer     not null,
-    type varchar(20)         not null
+    type         varchar(20) not null
 );
 
-create unique index relationship_uidx on relationship(profile_from, profile_to, type);
+create unique index if not exists relationship_uidx on relationship(profile_from, profile_to, type);
