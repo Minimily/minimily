@@ -2,7 +2,7 @@ use actix_session::Session;
 use actix_web::{web, HttpResponse, Responder, Either};
 use chrono::NaiveDate;
 use crate::handler::{handle_sign_in, handle_sign_up};
-use crate::model::{AppState, GroupType};
+use crate::model::{AppState, GroupType, UserAccount};
 use crate::form::{CreateFamilyForm, EditProfileForm, SignInForm, SignUpForm};
 use crate::{repository, template};
 use crate::template::respond_with_template;
@@ -148,8 +148,18 @@ pub async fn profile_edit_post(state: web::Data<AppState>, form: web::Form<EditP
             .filter(|s| !s.is_empty())
             .and_then(|s| NaiveDate::parse_from_str(s, "%Y-%m-%d").ok());
 
-        let phone = form.phone.as_deref().filter(|s| !s.is_empty());
-        match repository::update_user_account(&state.pool, user_id, &form.first_name, &form.last_name, birth_date, &form.email, phone).await {
+        let user_account = UserAccount {
+            id: user_id,
+            first_name: form.first_name.clone(),
+            last_name: form.last_name.clone(),
+            birth_date,
+            email: Some(form.email.clone()),
+            phone: form.phone.clone().filter(|s| !s.is_empty()),
+            password: None,
+            created: None,
+            modified: None,
+        };
+        match repository::update_user_account(&state.pool, &user_account).await {
             Ok(_) => {
                 let _ = session.insert("full_name", format!("{} {}", form.first_name, form.last_name));
                 let _ = session.insert("email", form.email.clone());

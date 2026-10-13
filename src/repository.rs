@@ -1,4 +1,3 @@
-use chrono::NaiveDate;
 use sqlx::{Error, PgConnection, Row};
 use sqlx::postgres::{PgRow, PgPool};
 use crate::model::{Group, GroupMember, GroupType, UserAccount};
@@ -143,18 +142,18 @@ pub async fn add_group_member(conn: &mut PgConnection, group_id: i32, user_accou
     Ok(())
 }
 
-pub async fn update_user_account(conn: &PgPool, id: i32, first_name: &str, last_name: &str, birth_date: Option<NaiveDate>, email: &str, phone: Option<&str>) -> Result<(), Error> {
+pub async fn update_user_account(conn: &PgPool, user_account: &UserAccount) -> Result<(), Error> {
     sqlx::query("
         update user_account
         set first_name = $1, last_name = $2, birth_date = $3, email = $4, phone = $5, modified = now()
         where id = $6
     ")
-        .bind(first_name)
-        .bind(last_name)
-        .bind(birth_date)
-        .bind(email)
-        .bind(phone)
-        .bind(id)
+        .bind(&user_account.first_name)
+        .bind(&user_account.last_name)
+        .bind(user_account.birth_date)
+        .bind(&user_account.email)
+        .bind(&user_account.phone)
+        .bind(user_account.id)
         .execute(conn)
         .await?;
 
