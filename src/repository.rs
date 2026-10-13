@@ -1,7 +1,7 @@
 use chrono::NaiveDate;
 use sqlx::{Error, PgConnection, Row};
 use sqlx::postgres::{PgRow, PgPool};
-use crate::model::{Profile, ProfileType, Relationship, RelationshipType, UserAccount};
+use crate::model::{Group, GroupMember, GroupType, UserAccount};
 
 pub async fn num_user_accounts(conn: &PgPool) -> Result<i64, Error> {
     sqlx::query("select count(id) num from user_account")
@@ -33,7 +33,7 @@ pub async fn get_user_account_by_email(conn: &PgPool, email: String) -> Result<U
 }
 
 pub async fn create_user_account(conn: &mut PgConnection, user_account: UserAccount) -> Result<UserAccount, Error> {
-    let user_account = sqlx::query("
+    sqlx::query("
         insert into user_account (first_name, last_name, birth_date, email, password)
         values ($1, $2, $3, $4, $5)
         returning id, created, modified
@@ -53,34 +53,50 @@ pub async fn create_user_account(conn: &mut PgConnection, user_account: UserAcco
             password: user_account.password.clone(),
             created: row.get("created"),
             modified: row.get("modified"),
-        }).fetch_one(&mut *conn).await;
+        }).fetch_one(conn).await
+}
 
-    match user_account {
-        Ok(ua) => {
-            let profile = ua.new_profile();
-            create_profile(conn, profile).await?;
-            Ok(ua)
-        },
-        Err(e) => {
-            Err(e)
-        }
+fn row_to_group(row: &PgRow) -> Group {
+    Group {
+        id: row.get("id"),
+        name: row.get("name"),
+        group_type: row.get("type"),
+        created_by: row.get("created_by"),
+        created: row.get("created"),
     }
 }
 
-pub async fn get_profile(conn: &PgPool, email: String) -> Result<Profile, Error> {
+pub async fn get_user_group(conn: &PgPool, user_account_id: i32, group_type: GroupType) -> Result<Group, Error> {
+    sqlx::query(r#"
+        select g.*
+        from "group" g
+            join group_member gm on gm.group_id = g.id
+        where gm.user_account = $1
+            and g.type = $2
+        order by g.id
+        limit 1
+        "#)
+        .bind(user_account_id)
+        .bind(group_type)
+        .map(|row: PgRow| row_to_group(&row))
+        .fetch_one(conn)
+        .await
+}
+
+pub async fn get_group_members(conn: &PgPool, group_id: i32) -> Result<Vec<GroupMember>, Error> {
     sqlx::query("
-        select ua.id as user_id, ua.first_name, ua.last_name, ua.birth_date, ua.created, ua.email, ua.phone,
-               p.id as profile_id, p.name, p.type, p.created_by
-        from user_account ua
-            join profile p on p.user_account = ua.id
-        where ua.email = $1
-    ")
-        .bind(email)
-        .map(|row: PgRow| Profile {
-            id: row.get("profile_id"),
-            name: row.get("name"),
-            profile_type: row.get("type"),
-            user_account: Some(UserAccount {
+        select gm.id as member_id, gm.group_id, gm.joined,
+               ua.id as user_id, ua.first_name, ua.last_name, ua.birth_date, ua.email, ua.phone, ua.created
+        from group_member gm
+            join user_account ua on ua.id = gm.user_account
+        where gm.group_id = $1
+        order by ua.first_name, ua.last_name
+        ")
+        .bind(group_id)
+        .map(|row: PgRow| GroupMember {
+            id: row.get("member_id"),
+            group_id: row.get("group_id"),
+            user_account: UserAccount {
                 id: row.get("user_id"),
                 first_name: row.get("first_name"),
                 last_name: row.get("last_name"),
@@ -90,99 +106,41 @@ pub async fn get_profile(conn: &PgPool, email: String) -> Result<Profile, Error>
                 password: None,
                 created: row.get("created"),
                 modified: None,
-            }),
-            created_by: Some(UserAccount {
-                id: row.get("created_by"),
-                first_name: "".to_string(),
-                last_name: "".to_string(),
-                birth_date: None,
-                email: None,
-                phone: None,
-                password: None,
-                created: None,
-                modified: None,
-            }),
-        })
-        .fetch_one(conn)
-        .await
-}
-
-pub async fn get_family_profile(conn: &PgPool, profile: &Profile) -> Result<Profile, Error> {
-    sqlx::query("
-        select p.*
-        from relationship r
-	        join profile p on p.id = r.profile_to
-        where r.profile_from  = $1
-	        and r.type = 'familymember'
-        ")
-        .bind(profile.id)
-        .map(|row: PgRow| Profile {
-            id: row.get("id"),
-            name: row.get("name"),
-            profile_type: row.get("type"),
-            user_account: None,
-            created_by: None,
-        })
-        .fetch_one(conn)
-        .await
-}
-
-pub async fn get_family_members(conn: &PgPool, family_profile: &Profile, profile: &Profile) -> Result<Vec<Relationship>, Error> {
-    let created_by = profile.created_by.as_ref().unwrap();
-
-    sqlx::query("
-        select r.id as rel_id, r.type as rel_type, p.*
-        from relationship r
-            join profile p on p.id = r.profile_to
-        where r.profile_from = $1
-            and r.profile_to in (select r.profile_from
-                                 from relationship r
-                                    join profile p on p.id = r.profile_from
-                                 where r.profile_to = $2
-                                    and p.created_by != $3)
-        ")
-        .bind(profile.id)
-        .bind(family_profile.id)
-        .bind(created_by.id)
-        .map(|row: PgRow| Relationship {
-            id: row.get("rel_id"),
-            profile_from: Profile {
-                id: row.get("id"),
-                name: row.get("name"),
-                profile_type: row.get("type"),
-                user_account: None,
-                created_by: None,
             },
-            profile_to: profile.clone(),
-            relationship_type: row.get("rel_type"),
+            joined: row.get("joined"),
         })
         .fetch_all(conn)
         .await
 }
 
-pub async fn create_profile(conn: &mut PgConnection, profile: Profile) -> Result<Profile, Error> {
-    sqlx::query("
-        insert into profile (name, type, user_account, created_by)
-        values ($1, $2, $3, $4)
-        returning id
-    ")
-        .bind(profile.name.clone())
-        .bind(profile.profile_type.clone())
-        .bind(match &profile.user_account {
-            Some(user_account) => Some(user_account.id),
-            None => None
-        })
-        .bind(match &profile.created_by {
-            Some(user_account) => Some(user_account.id),
-            None => None
-        })
-        .map(|row: PgRow| Profile {
-            id: row.get("id"),
-            name: profile.name.clone(),
-            profile_type: profile.profile_type.clone(),
-            user_account: profile.user_account.clone(),
-            created_by: profile.created_by.clone(),
-        }).fetch_one(conn).await
+pub async fn create_group(conn: &PgPool, name: &str, group_type: GroupType, creator_id: i32) -> Result<Group, Error> {
+    let mut tx = conn.begin().await?;
+
+    let group = sqlx::query(r#"
+        insert into "group" (name, type, created_by)
+        values ($1, $2, $3)
+        returning *
+        "#)
+        .bind(name)
+        .bind(group_type)
+        .bind(creator_id)
+        .map(|row: PgRow| row_to_group(&row))
+        .fetch_one(&mut *tx)
+        .await?;
+
+    add_group_member(&mut tx, group.id, creator_id).await?;
+
+    tx.commit().await?;
+    Ok(group)
+}
+
+pub async fn add_group_member(conn: &mut PgConnection, group_id: i32, user_account_id: i32) -> Result<(), Error> {
+    sqlx::query("insert into group_member (group_id, user_account) values ($1, $2)")
+        .bind(group_id)
+        .bind(user_account_id)
+        .execute(conn)
+        .await?;
+    Ok(())
 }
 
 pub async fn update_user_account(conn: &PgPool, id: i32, first_name: &str, last_name: &str, birth_date: Option<NaiveDate>, email: &str, phone: Option<&str>) -> Result<(), Error> {
@@ -200,54 +158,5 @@ pub async fn update_user_account(conn: &PgPool, id: i32, first_name: &str, last_
         .execute(conn)
         .await?;
 
-    sqlx::query("
-        update profile
-        set name = $1
-        where user_account = $2 and type = 'useraccount'
-    ")
-        .bind(format!("{} {}", first_name, last_name))
-        .bind(id)
-        .execute(conn)
-        .await?;
-
     Ok(())
-}
-
-pub async fn create_family(conn: &PgPool, family_name: &str, user_profile: &Profile) -> Result<Profile, Error> {
-    let mut tx = conn.begin().await?;
-
-    let family_profile = create_profile(&mut tx, Profile {
-        id: 0,
-        name: family_name.to_string(),
-        profile_type: ProfileType::Family,
-        user_account: None,
-        created_by: user_profile.created_by.clone(),
-    }).await?;
-
-    sqlx::query("insert into relationship (profile_from, profile_to, type) values ($1, $2, $3)")
-        .bind(user_profile.id)
-        .bind(family_profile.id)
-        .bind(RelationshipType::FamilyMember)
-        .execute(&mut *tx)
-        .await?;
-
-    tx.commit().await?;
-    Ok(family_profile)
-}
-
-pub async fn create_relationship(conn: &PgPool, relationship: Relationship) -> Result<Relationship, Error> {
-    sqlx::query("
-        insert into relationship (profile_from, profile_to, type)
-        values ($1, $2, $3)
-        returning id
-    ")
-        .bind(relationship.profile_from.id)
-        .bind(relationship.profile_to.id)
-        .bind(relationship.relationship_type.clone())
-        .map(|row: PgRow| Relationship {
-            id: row.get("id"),
-            profile_from: relationship.profile_from.clone(),
-            profile_to: relationship.profile_to.clone(),
-            relationship_type: relationship.relationship_type.clone(),
-        }).fetch_one(conn).await
 }

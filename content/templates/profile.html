@@ -74,14 +74,14 @@
             <thead>
                 <tr>
                     <th scope="col">Name</th>
-                    <th scope="col">Relationship</th>
+                    <th scope="col">Email</th>
                 </tr>
             </thead>
             <tbody>
                 {% for family_member in family_members %}
                     <tr>
-                        <td>{{ family_member.profile_from.name }}</td>
-                        <td>{{ family_member.relationship_type }}</td>
+                        <td>{{ family_member.user_account.first_name }} {{ family_member.user_account.last_name }}</td>
+                        <td>{{ family_member.user_account.email }}</td>
                     </tr>
                 {% endfor %}
             </tbody>

@@ -2,7 +2,7 @@ use actix_session::Session;
 use actix_web::{web, HttpResponse, Responder, Either};
 use chrono::NaiveDate;
 use crate::handler::{handle_sign_in, handle_sign_up};
-use crate::model::AppState;
+use crate::model::{AppState, GroupType};
 use crate::form::{CreateFamilyForm, EditProfileForm, SignInForm, SignUpForm};
 use crate::{repository, template};
 use crate::template::respond_with_template;
@@ -72,23 +72,22 @@ pub async fn profile(state: web::Data<AppState>, session: Session) -> impl Respo
     let mut context = template::create_context(&session);
 
     if let Ok(Some(email)) = session.get::<String>("email") {
-        let profile = repository::get_profile(&state.pool, email).await;
-        match profile {
-            Ok(p) => {
-                context.insert("user_account", &p.user_account);
+        let user_account = repository::get_user_account_by_email(&state.pool, email).await;
+        match user_account {
+            Ok(mut ua) => {
+                ua.password = None;
+                context.insert("user_account", &ua);
 
-                let family = repository::get_family_profile(&state.pool, &p).await;
-                match family {
+                match repository::get_user_group(&state.pool, ua.id, GroupType::Family).await {
                     Ok(f) => {
                         context.insert("family", &f);
-                        let family_members = repository::get_family_members(&state.pool, &f, &p).await;
-                        match family_members {
+                        match repository::get_group_members(&state.pool, f.id).await {
                             Ok(m) => context.insert("family_members", &m),
                             Err(e) => log::error!("Error retrieving family members: {}", e)
                         }
                     },
                     Err(sqlx::Error::RowNotFound) => context.insert("no_family", &true),
-                    Err(e) => log::error!("Error retrieving family profile: {}", e)
+                    Err(e) => log::error!("Error retrieving family: {}", e)
                 }
             },
             Err(e) => {
@@ -172,21 +171,13 @@ pub async fn profile_edit_post(state: web::Data<AppState>, form: web::Form<EditP
 }
 
 pub async fn family_create_post(state: web::Data<AppState>, form: web::Form<CreateFamilyForm>, session: Session) -> web::Redirect {
-    let session_email = match session.get::<String>("email") {
-        Ok(Some(email)) => email,
+    let user_id = match session.get::<i32>("id") {
+        Ok(Some(id)) => id,
         _ => return web::Redirect::to("/").see_other(),
     };
 
-    let profile = match repository::get_profile(&state.pool, session_email).await {
-        Ok(p) => p,
-        Err(e) => {
-            log::error!("Error retrieving profile for family creation: {}", e);
-            return web::Redirect::to("/profile").see_other();
-        }
-    };
-
     let form = form.into_inner();
-    if let Err(e) = repository::create_family(&state.pool, &form.name, &profile).await {
+    if let Err(e) = repository::create_group(&state.pool, &form.name, GroupType::Family, user_id).await {
         log::error!("Error creating family: {}", e);
     }
     web::Redirect::to("/profile").see_other()
