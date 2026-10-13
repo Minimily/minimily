@@ -36,6 +36,3 @@ begin
         on conflict (group_id, user_account) do nothing;
     end if;
 end $$;
-
-drop table if exists relationship;
-drop table if exists profile;
