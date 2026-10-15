@@ -87,8 +87,8 @@ impl SignUpForm {
 
             Some(UserAccount {
                 id: 0,
-                first_name: self.first_name.clone(),
-                last_name: self.last_name.clone(),
+                first_name: Some(self.first_name.clone()),
+                last_name: Some(self.last_name.clone()),
                 email: self.email.clone(),
                 phone: None,
                 birth_date,

@@ -113,8 +113,8 @@ pub async fn profile_edit(state: web::Data<AppState>, session: Session) -> impl 
     match repository::get_user_account_by_email(&state.pool, session_email).await {
         Ok(ua) => {
             let form = EditProfileForm {
-                first_name: ua.first_name,
-                last_name: ua.last_name,
+                first_name: ua.first_name.unwrap(),
+                last_name: ua.last_name.unwrap(),
                 birth_date: ua.birth_date.map(|d| d.format("%Y-%m-%d").to_string()),
                 email: ua.email.unwrap_or_default(),
                 phone: ua.phone,
@@ -150,8 +150,8 @@ pub async fn profile_edit_post(state: web::Data<AppState>, form: web::Form<EditP
 
         let user_account = UserAccount {
             id: user_id,
-            first_name: form.first_name.clone(),
-            last_name: form.last_name.clone(),
+            first_name: Some(form.first_name.clone()),
+            last_name: Some(form.last_name.clone()),
             birth_date,
             email: Some(form.email.clone()),
             phone: form.phone.clone().filter(|s| !s.is_empty()),

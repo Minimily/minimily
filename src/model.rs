@@ -1,5 +1,5 @@
 use chrono::{NaiveDate, NaiveDateTime};
-use sqlx::PgPool;
+use sqlx::{PgPool};
 use tera::Tera;
 
 pub struct AppState {
@@ -16,8 +16,8 @@ impl AppState {
 #[derive(serde::Serialize, Clone)]
 pub struct UserAccount {
     pub id: i32,
-    pub first_name: String,
-    pub last_name: String,
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
     pub birth_date: Option<NaiveDate>,
     pub email: Option<String>,
     pub phone: Option<String>,
@@ -28,17 +28,60 @@ pub struct UserAccount {
 
 impl UserAccount {
     pub fn full_name(&self) -> String {
-        format!("{} {}", self.first_name, self.last_name)
+        match &self.first_name {
+            Some(first) => {
+                match &self.last_name {
+                    Some(last) => {
+                        return format!("{} {}", first, last)
+                    }
+                    None => return format!("{}", first)
+                }
+            }
+            None => {
+                match &self.last_name {
+                    Some(last) => {
+                        return format!("{}", last)
+                    }
+                    None => return "".to_string()
+                }
+            }
+        }
+    }
+
+    pub fn new_user_account(id: i32) -> Self {
+        UserAccount {
+            id,
+            first_name: None,
+            last_name: None,
+            birth_date: None,
+            email: None,
+            phone: None,
+            password: None,
+            created: None,
+            modified: None,
+        }
     }
 }
 
 #[derive(serde::Serialize, Clone)]
-pub struct Group {
+pub struct UserGroup {
     pub id: i32,
-    pub name: String,
-    pub group_type: GroupType,
-    pub created_by: i32,
-    pub created: Option<NaiveDateTime>,
+    pub name: Option<String>,
+    pub group_type: Option<GroupType>,
+    pub created_by: Option<UserAccount>,
+    pub created_date: Option<NaiveDateTime>,
+}
+
+impl UserGroup {
+    pub fn new_user_group(id: i32) -> Self {
+        UserGroup {
+            id,
+            name: None,
+            group_type: None,
+            created_by: None,
+            created_date: None,
+        }
+    }
 }
 
 #[derive(serde::Serialize, Clone, Debug, PartialEq, sqlx::Type)]
@@ -50,7 +93,8 @@ pub enum GroupType {
 #[derive(serde::Serialize, Clone)]
 pub struct GroupMember {
     pub id: i32,
-    pub group_id: i32,
-    pub user_account: UserAccount,
-    pub joined: Option<NaiveDateTime>,
+    pub user_group: Option<UserGroup>,
+    pub user_account: Option<UserAccount>,
+    pub created_by: Option<UserAccount>,
+    pub created_date: Option<NaiveDateTime>,
 }

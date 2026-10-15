@@ -1,6 +1,6 @@
 use sqlx::{Error, PgConnection, Row};
 use sqlx::postgres::{PgRow, PgPool};
-use crate::model::{Group, GroupMember, GroupType, UserAccount};
+use crate::model::{UserGroup, GroupMember, GroupType, UserAccount};
 
 pub async fn num_user_accounts(conn: &PgPool) -> Result<i64, Error> {
     sqlx::query("select count(id) num from user_account")
@@ -55,24 +55,24 @@ pub async fn create_user_account(conn: &mut PgConnection, user_account: UserAcco
         }).fetch_one(conn).await
 }
 
-fn row_to_group(row: &PgRow) -> Group {
-    Group {
+fn row_to_group(row: &PgRow) -> UserGroup {
+    UserGroup {
         id: row.get("id"),
         name: row.get("name"),
         group_type: row.get("type"),
-        created_by: row.get("created_by"),
-        created: row.get("created"),
+        created_by: Some(UserAccount::new_user_account(row.get("created_by"))),
+        created_date: row.get("created_date"),
     }
 }
 
-pub async fn get_user_group(conn: &PgPool, user_account_id: i32, group_type: GroupType) -> Result<Group, Error> {
+pub async fn get_user_group(conn: &PgPool, user_account_id: i32, group_type: GroupType) -> Result<UserGroup, Error> {
     sqlx::query(r#"
-        select g.*
-        from "group" g
-            join group_member gm on gm.group_id = g.id
+        select ug.*
+        from user_group ug
+            join group_member gm on gm.user_group = ug.id
         where gm.user_account = $1
-            and g.type = $2
-        order by g.id
+            and ug.type = $2
+        order by ug.id
         limit 1
         "#)
         .bind(user_account_id)
@@ -84,18 +84,18 @@ pub async fn get_user_group(conn: &PgPool, user_account_id: i32, group_type: Gro
 
 pub async fn get_group_members(conn: &PgPool, group_id: i32) -> Result<Vec<GroupMember>, Error> {
     sqlx::query("
-        select gm.id as member_id, gm.group_id, gm.joined,
+        select gm.id as member_id, gm.user_group, gm.created_date, gm.created_by,
                ua.id as user_id, ua.first_name, ua.last_name, ua.birth_date, ua.email, ua.phone, ua.created
         from group_member gm
             join user_account ua on ua.id = gm.user_account
-        where gm.group_id = $1
+        where gm.user_group = $1
         order by ua.first_name, ua.last_name
         ")
         .bind(group_id)
         .map(|row: PgRow| GroupMember {
             id: row.get("member_id"),
-            group_id: row.get("group_id"),
-            user_account: UserAccount {
+            user_group: Some(UserGroup::new_user_group(row.get("user_group"))),
+            user_account: Some(UserAccount {
                 id: row.get("user_id"),
                 first_name: row.get("first_name"),
                 last_name: row.get("last_name"),
@@ -105,18 +105,19 @@ pub async fn get_group_members(conn: &PgPool, group_id: i32) -> Result<Vec<Group
                 password: None,
                 created: row.get("created"),
                 modified: None,
-            },
-            joined: row.get("joined"),
+            }),
+            created_date: row.get("created_date"),
+            created_by: row.get::<Option<i32>, _>("created_by").map(UserAccount::new_user_account),
         })
         .fetch_all(conn)
         .await
 }
 
-pub async fn create_group(conn: &PgPool, name: &str, group_type: GroupType, creator_id: i32) -> Result<Group, Error> {
+pub async fn create_group(conn: &PgPool, name: &str, group_type: GroupType, creator_id: i32) -> Result<UserGroup, Error> {
     let mut tx = conn.begin().await?;
 
     let group = sqlx::query(r#"
-        insert into "group" (name, type, created_by)
+        insert into user_group (name, type, created_by)
         values ($1, $2, $3)
         returning *
         "#)
@@ -134,7 +135,7 @@ pub async fn create_group(conn: &PgPool, name: &str, group_type: GroupType, crea
 }
 
 pub async fn add_group_member(conn: &mut PgConnection, group_id: i32, user_account_id: i32) -> Result<(), Error> {
-    sqlx::query("insert into group_member (group_id, user_account) values ($1, $2)")
+    sqlx::query("insert into group_member (user_group, user_account) values ($1, $2)")
         .bind(group_id)
         .bind(user_account_id)
         .execute(conn)
