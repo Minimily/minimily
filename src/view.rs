@@ -193,6 +193,11 @@ pub async fn family_create_post(state: web::Data<AppState>, form: web::Form<Crea
     web::Redirect::to("/profile").see_other()
 }
 
+pub async fn shopping(state: web::Data<AppState>, session: Session) -> impl Responder {
+    let context = template::create_context(&session);
+    respond_with_template(state, context, "shopping.html")
+}
+
 pub async fn robots(state: web::Data<AppState>, session: Session) -> HttpResponse {
     let context = template::create_context(&session);
     respond_with_template(state, context, "robots.html")
