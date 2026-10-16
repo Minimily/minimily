@@ -1,6 +1,6 @@
 use sqlx::{Error, PgConnection, Row};
 use sqlx::postgres::{PgRow, PgPool};
-use crate::model::{UserGroup, GroupMember, GroupType, UserAccount};
+use crate::model::{Good, UserGroup, GroupMember, GroupType, UserAccount};
 
 pub async fn num_user_accounts(conn: &PgPool) -> Result<i64, Error> {
     sqlx::query("select count(id) num from user_account")
@@ -159,4 +159,88 @@ pub async fn update_user_account(conn: &PgPool, user_account: &UserAccount) -> R
         .await?;
 
     Ok(())
+}
+
+fn row_to_good(row: &PgRow) -> Good {
+    Good {
+        id: row.get("id"),
+        user_group: row.get::<Option<i32>, _>("user_group").map(UserGroup::new_user_group),
+        name: row.get("name"),
+        description: row.get("description"),
+        created_by: row.get::<Option<i32>, _>("created_by").map(UserAccount::new_user_account),
+        created_date: row.get("created_date"),
+    }
+}
+
+// Goods are visible to the user who created them and to the members of the group they belong to.
+const GOOD_ACCESS: &str = "
+    (g.created_by = $1 or g.user_group in (select user_group from group_member where user_account = $1))
+";
+
+pub async fn get_goods(conn: &PgPool, user_account_id: i32) -> Result<Vec<Good>, Error> {
+    sqlx::query(&format!("
+        select g.*
+        from good g
+        where {}
+        order by g.name
+        ", GOOD_ACCESS))
+        .bind(user_account_id)
+        .map(|row: PgRow| row_to_good(&row))
+        .fetch_all(conn)
+        .await
+}
+
+pub async fn get_good(conn: &PgPool, id: i32, user_account_id: i32) -> Result<Good, Error> {
+    sqlx::query(&format!("
+        select g.*
+        from good g
+        where g.id = $2 and {}
+        ", GOOD_ACCESS))
+        .bind(user_account_id)
+        .bind(id)
+        .map(|row: PgRow| row_to_good(&row))
+        .fetch_one(conn)
+        .await
+}
+
+pub async fn create_good(conn: &PgPool, good: &Good) -> Result<Good, Error> {
+    sqlx::query("
+        insert into good (user_group, name, description, created_by)
+        values ($1, $2, $3, $4)
+        returning *
+        ")
+        .bind(good.user_group.as_ref().map(|g| g.id))
+        .bind(&good.name)
+        .bind(&good.description)
+        .bind(good.created_by.as_ref().map(|ua| ua.id))
+        .map(|row: PgRow| row_to_good(&row))
+        .fetch_one(conn)
+        .await
+}
+
+pub async fn update_good(conn: &PgPool, good: &Good, user_account_id: i32) -> Result<u64, Error> {
+    let result = sqlx::query(&format!("
+        update good g
+        set name = $3, description = $4
+        where g.id = $2 and {}
+        ", GOOD_ACCESS))
+        .bind(user_account_id)
+        .bind(good.id)
+        .bind(&good.name)
+        .bind(&good.description)
+        .execute(conn)
+        .await?;
+    Ok(result.rows_affected())
+}
+
+pub async fn delete_good(conn: &PgPool, id: i32, user_account_id: i32) -> Result<u64, Error> {
+    let result = sqlx::query(&format!("
+        delete from good g
+        where g.id = $2 and {}
+        ", GOOD_ACCESS))
+        .bind(user_account_id)
+        .bind(id)
+        .execute(conn)
+        .await?;
+    Ok(result.rows_affected())
 }

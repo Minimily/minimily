@@ -98,3 +98,13 @@ pub struct GroupMember {
     pub created_by: Option<UserAccount>,
     pub created_date: Option<NaiveDateTime>,
 }
+
+#[derive(serde::Serialize, Clone)]
+pub struct Good {
+    pub id: i32,
+    pub user_group: Option<UserGroup>,
+    pub name: String,
+    pub description: Option<String>,
+    pub created_by: Option<UserAccount>,
+    pub created_date: Option<NaiveDateTime>,
+}

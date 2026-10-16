@@ -1,9 +1,10 @@
+use std::collections::HashMap;
 use actix_session::Session;
 use actix_web::{web, HttpResponse, Responder, Either};
 use chrono::NaiveDate;
 use crate::handler::{handle_sign_in, handle_sign_up};
-use crate::model::{AppState, GroupType, UserAccount};
-use crate::form::{CreateFamilyForm, EditProfileForm, SignInForm, SignUpForm};
+use crate::model::{AppState, Good, GroupType, UserAccount};
+use crate::form::{CreateFamilyForm, EditProfileForm, GoodForm, SignInForm, SignUpForm};
 use crate::{repository, template};
 use crate::template::respond_with_template;
 
@@ -193,9 +194,109 @@ pub async fn family_create_post(state: web::Data<AppState>, form: web::Form<Crea
     web::Redirect::to("/profile").see_other()
 }
 
-pub async fn shopping(state: web::Data<AppState>, session: Session) -> impl Responder {
-    let context = template::create_context(&session);
+async fn render_shopping(state: web::Data<AppState>, session: &Session, user_id: i32, good_id: Option<i32>, form: &GoodForm, errors: &HashMap<&str, String>) -> HttpResponse {
+    let mut context = template::create_context(session);
+
+    match repository::get_goods(&state.pool, user_id).await {
+        Ok(goods) => context.insert("goods", &goods),
+        Err(e) => {
+            log::error!("Error retrieving goods: {}", e);
+            context.insert("error", "Unable to load the goods.");
+        }
+    }
+    context.insert("good_id", &good_id);
+    context.insert("form", form);
+    context.insert("errors", errors);
+    // Reopen the good modal when the submitted form has validation errors.
+    context.insert("show_good_modal", &errors.values().any(|e| !e.is_empty()));
+
     respond_with_template(state, context, "shopping.html")
+}
+
+pub async fn shopping(state: web::Data<AppState>, session: Session) -> impl Responder {
+    let user_id = match session.get::<i32>("id") {
+        Ok(Some(id)) => id,
+        _ => return Either::Left(web::Redirect::to("/signin").see_other()),
+    };
+
+    let form = GoodForm::default();
+    let errors = form.get_errors();
+    Either::Right(render_shopping(state, &session, user_id, None, &form, &errors).await)
+}
+
+pub async fn good_create_post(state: web::Data<AppState>, form: web::Form<GoodForm>, session: Session) -> impl Responder {
+    let user_id = match session.get::<i32>("id") {
+        Ok(Some(id)) => id,
+        _ => return Either::Left(web::Redirect::to("/signin").see_other()),
+    };
+
+    let form = form.into_inner();
+    let (valid, errors) = form.validate();
+    if !valid {
+        return Either::Right(render_shopping(state, &session, user_id, None, &form, &errors).await);
+    }
+
+    // Goods are shared with the user's family, when there is one.
+    let user_group = match repository::get_user_group(&state.pool, user_id, GroupType::Family).await {
+        Ok(f) => Some(f),
+        Err(sqlx::Error::RowNotFound) => None,
+        Err(e) => {
+            log::error!("Error retrieving family: {}", e);
+            None
+        }
+    };
+
+    let good = Good {
+        id: 0,
+        user_group,
+        name: form.name.trim().to_string(),
+        description: form.description(),
+        created_by: Some(UserAccount::new_user_account(user_id)),
+        created_date: None,
+    };
+    if let Err(e) = repository::create_good(&state.pool, &good).await {
+        log::error!("Error creating good: {}", e);
+    }
+    Either::Left(web::Redirect::to("/shopping").see_other())
+}
+
+pub async fn good_edit_post(state: web::Data<AppState>, path: web::Path<i32>, form: web::Form<GoodForm>, session: Session) -> impl Responder {
+    let user_id = match session.get::<i32>("id") {
+        Ok(Some(id)) => id,
+        _ => return Either::Left(web::Redirect::to("/signin").see_other()),
+    };
+
+    let good_id = path.into_inner();
+    let form = form.into_inner();
+    let (valid, errors) = form.validate();
+    if !valid {
+        return Either::Right(render_shopping(state, &session, user_id, Some(good_id), &form, &errors).await);
+    }
+
+    let good = Good {
+        id: good_id,
+        user_group: None,
+        name: form.name.trim().to_string(),
+        description: form.description(),
+        created_by: None,
+        created_date: None,
+    };
+    if let Err(e) = repository::update_good(&state.pool, &good, user_id).await {
+        log::error!("Error updating good: {}", e);
+    }
+    Either::Left(web::Redirect::to("/shopping").see_other())
+}
+
+pub async fn good_delete_post(state: web::Data<AppState>, path: web::Path<i32>, session: Session) -> web::Redirect {
+    let user_id = match session.get::<i32>("id") {
+        Ok(Some(id)) => id,
+        _ => return web::Redirect::to("/signin").see_other(),
+    };
+
+    if let Err(e) = repository::delete_good(&state.pool, path.into_inner(), user_id).await {
+        log::error!("Error deleting good: {}", e);
+    }
+    web::Redirect::to("/shopping").see_other()
 }
 
 pub async fn robots(state: web::Data<AppState>, session: Session) -> HttpResponse {
