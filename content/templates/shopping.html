@@ -12,7 +12,19 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h4 class="mb-0">Goods</h4>
-        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#good-modal">Add Good</button>
+        <div class="d-flex align-items-center gap-2">
+            <form method="get" action="/shopping">
+                <label for="location-filter" class="visually-hidden">Location</label>
+                <select class="form-select form-select-sm" id="location-filter" name="location" onchange="this.form.submit()">
+                    <option value="">No location</option>
+                    {% for location in locations | default(value=[]) %}
+                        <option value="{{ location.id }}"{% if location_filter and location_filter == location.id %} selected{% endif %}>{{ location.name }}</option>
+                    {% endfor %}
+                </select>
+                <noscript><button type="submit" class="btn btn-secondary btn-sm">Filter</button></noscript>
+            </form>
+            <button type="button" class="btn btn-primary btn-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#good-modal">Add Good</button>
+        </div>
     </div>
 
     {% if goods %}
@@ -21,6 +33,7 @@
                 <tr>
                     <th scope="col">Name</th>
                     <th scope="col">Description</th>
+                    <th scope="col">Location</th>
                     <th scope="col" class="text-end">Actions</th>
                 </tr>
             </thead>
@@ -29,6 +42,7 @@
                     <tr>
                         <td><a href="/shopping/goods/{{ good.id }}">{{ good.name }}</a></td>
                         <td>{{ good.description | default(value="") }}</td>
+                        <td>{% if good.location %}{{ good.location.name }}{% endif %}</td>
                         <td class="text-end">
                             <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#good-modal"
                                     data-good-id="{{ good.id }}" data-good-name="{{ good.name }}" data-good-description="{{ good.description | default(value="") }}"
@@ -40,7 +54,42 @@
         </table>
     {% else %}
         <div class="card-body">
-            <p class="card-text">There are no goods yet. Click on "Add Good" to start your shopping list.</p>
+            <p class="card-text">{% if location_filter %}There are no goods in this location.{% else %}There are no goods without a location.{% endif %} Click on "Add Good" to add one.</p>
+        </div>
+    {% endif %}
+</div>
+
+<div class="card mt-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">Locations</h4>
+        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#location-modal">Add Location</button>
+    </div>
+
+    {% if locations %}
+        <table class="table table-striped mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Description</th>
+                    <th scope="col" class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for location in locations %}
+                    <tr>
+                        <td>{{ location.name }}</td>
+                        <td>{{ location.description | default(value="") }}</td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#location-modal"
+                                    data-location-id="{{ location.id }}" data-location-name="{{ location.name }}" data-location-description="{{ location.description | default(value="") }}">Edit</button>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="card-body">
+            <p class="card-text">There are no locations yet. Click on "Add Location" to tell where your goods are stored.</p>
         </div>
     {% endif %}
 </div>
@@ -56,23 +105,23 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="name" class="form-label">Name *</label>
-                        <input type="text" class="form-control" id="name" name="name" maxlength="100" value="{{ form.name }}" required>
-                        <span class="error">{{ errors["name"] }}</span>
+                        <input type="text" class="form-control" id="name" name="name" maxlength="100" value="{{ good_form.name }}" required>
+                        <span class="error">{{ good_errors["name"] }}</span>
                     </div>
                     <div class="mb-3">
                         <label for="description" class="form-label">Description</label>
-                        <textarea class="form-control" id="description" name="description" rows="3">{{ form.description | default(value="") }}</textarea>
-                        <span class="error">{{ errors["description"] }}</span>
+                        <textarea class="form-control" id="description" name="description" rows="3">{{ good_form.description | default(value="") }}</textarea>
+                        <span class="error">{{ good_errors["description"] }}</span>
                     </div>
                     <div class="mb-3">
                         <label for="location" class="form-label">Location</label>
                         <select class="form-select" id="location" name="location">
                             <option value="">No location</option>
                             {% for location in locations | default(value=[]) %}
-                                <option value="{{ location.id }}"{% if form.location and form.location == location.id | as_str %} selected{% endif %}>{{ location.name }}</option>
+                                <option value="{{ location.id }}"{% if good_form.location and good_form.location == location.id | as_str %} selected{% endif %}>{{ location.name }}</option>
                             {% endfor %}
                         </select>
-                        <span class="error">{{ errors["location"] }}</span>
+                        <span class="error">{{ good_errors["location"] }}</span>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -83,6 +132,37 @@
             </form>
             <!-- Forms can't be nested, so the delete form sits outside and the Delete button points to it. -->
             <form id="good-delete-form" method="post" action="{% if good_id %}/shopping/goods/{{ good_id }}/delete{% endif %}" onsubmit="return confirm('Delete this good?');"></form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="location-modal" tabindex="-1" aria-labelledby="location-modal-label" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="location-form" method="post" action="{% if location_id %}/shopping/locations/{{ location_id }}/edit{% else %}/shopping/locations{% endif %}" enctype="application/x-www-form-urlencoded">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="location-modal-label">{% if location_id %}Edit Location{% else %}Add Location{% endif %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="location-name" class="form-label">Name *</label>
+                        <input type="text" class="form-control" id="location-name" name="name" maxlength="100" value="{{ location_form.name }}" required>
+                        <span class="error">{{ location_errors["name"] }}</span>
+                    </div>
+                    <div class="mb-3">
+                        <label for="location-description" class="form-label">Description</label>
+                        <textarea class="form-control" id="location-description" name="description" rows="3">{{ location_form.description | default(value="") }}</textarea>
+                        <span class="error">{{ location_errors["description"] }}</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" form="location-delete-form" id="location-delete-button" class="btn btn-danger me-auto{% if not location_id %} d-none{% endif %}">Delete</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+            <form id="location-delete-form" method="post" action="{% if location_id %}/shopping/locations/{{ location_id }}/delete{% endif %}" onsubmit="return confirm('Delete this location? Goods stored there will have no location.');"></form>
         </div>
     </div>
 </div>
@@ -114,7 +194,7 @@
             deleteButton.classList.toggle("d-none", !goodId);
             name.value = goodId ? button.dataset.goodName : "";
             description.value = goodId ? button.dataset.goodDescription : "";
-            locationSelect.value = goodId ? button.dataset.goodLocation : "";
+            locationSelect.value = goodId ? button.dataset.goodLocation : "{% if location_filter %}{{ location_filter }}{% endif %}";
             form.querySelectorAll(".error").forEach(function (e) { e.textContent = ""; });
         });
 
@@ -123,6 +203,41 @@
         });
 
         {% if show_good_modal %}
+            bootstrap.Modal.getOrCreateInstance(modal).show();
+        {% endif %}
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+        var modal = document.getElementById("location-modal");
+        var form = document.getElementById("location-form");
+        var title = document.getElementById("location-modal-label");
+        var name = document.getElementById("location-name");
+        var description = document.getElementById("location-description");
+        var deleteForm = document.getElementById("location-delete-form");
+        var deleteButton = document.getElementById("location-delete-button");
+
+        // Opened by a button: switch between adding and editing, based on the button that was clicked.
+        modal.addEventListener("show.bs.modal", function (event) {
+            var button = event.relatedTarget;
+            if (!button) {
+                return; // Reopened after a validation error: keep what the server rendered.
+            }
+
+            var locationId = button.dataset.locationId;
+            form.action = locationId ? "/shopping/locations/" + locationId + "/edit" : "/shopping/locations";
+            title.textContent = locationId ? "Edit Location" : "Add Location";
+            deleteForm.action = locationId ? "/shopping/locations/" + locationId + "/delete" : "";
+            deleteButton.classList.toggle("d-none", !locationId);
+            name.value = locationId ? button.dataset.locationName : "";
+            description.value = locationId ? button.dataset.locationDescription : "";
+            form.querySelectorAll(".error").forEach(function (e) { e.textContent = ""; });
+        });
+
+        modal.addEventListener("shown.bs.modal", function () {
+            name.focus();
+        });
+
+        {% if show_location_modal %}
             bootstrap.Modal.getOrCreateInstance(modal).show();
         {% endif %}
     });

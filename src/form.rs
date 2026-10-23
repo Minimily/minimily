@@ -236,3 +236,40 @@ impl GoodForm {
             .map(str::to_string)
     }
 }
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Default)]
+pub struct GoodLocationForm {
+    pub name: String,
+    pub description: Option<String>,
+}
+
+impl GoodLocationForm {
+    pub fn get_errors(&self) -> HashMap<&str, String> {
+        HashMap::from([
+            ("name", "".to_string()),
+            ("description", "".to_string()),
+        ])
+    }
+
+    pub fn validate(&self) -> (bool, HashMap<&str, String>) {
+        let mut errors = self.get_errors();
+        let mut valid = true;
+
+        if self.name.trim().is_empty() {
+            errors.insert("name", "Name cannot be empty".to_string());
+            valid = false;
+        } else if self.name.trim().chars().count() > 100 {
+            errors.insert("name", "Name cannot be longer than 100 characters".to_string());
+            valid = false;
+        }
+
+        (valid, errors)
+    }
+
+    pub fn description(&self) -> Option<String> {
+        self.description.as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string)
+    }
+}

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block breadcrumb %}
-<li class="breadcrumb-item"><a href="/shopping">Shopping</a></li>
+<li class="breadcrumb-item"><a href="/shopping{% if good.location %}?location={{ good.location.id }}{% endif %}">Shopping</a></li>
 <li class="breadcrumb-item active" aria-current="page">{{ good.name }}</li>
 {% endblock %}
 
@@ -47,7 +47,7 @@
         </dl>
     </div>
     <div class="card-footer">
-        <a href="/shopping" class="btn btn-secondary">Back to Shopping</a>
+        <a href="/shopping{% if good.location %}?location={{ good.location.id }}{% endif %}" class="btn btn-secondary">Back to Shopping</a>
     </div>
 </div>
 {% endblock %}
