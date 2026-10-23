@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use bcrypt::{hash, DEFAULT_COST};
 use chrono::{NaiveDate};
-use crate::model::{AppState, UserAccount};
+use crate::model::{AppState, GoodLocation, UserAccount};
 use crate::repository;
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
@@ -191,6 +191,7 @@ impl SignInForm {
 pub struct GoodForm {
     pub name: String,
     pub description: Option<String>,
+    pub location: Option<String>,
 }
 
 impl GoodForm {
@@ -198,6 +199,7 @@ impl GoodForm {
         HashMap::from([
             ("name", "".to_string()),
             ("description", "".to_string()),
+            ("location", "".to_string()),
         ])
     }
 
@@ -213,7 +215,18 @@ impl GoodForm {
             valid = false;
         }
 
+        if self.location.as_deref().is_some_and(|l| !l.is_empty() && l.parse::<i32>().is_err()) {
+            errors.insert("location", "Invalid location".to_string());
+            valid = false;
+        }
+
         (valid, errors)
+    }
+
+    pub fn location(&self) -> Option<GoodLocation> {
+        self.location.as_deref()
+            .and_then(|l| l.parse::<i32>().ok())
+            .map(GoodLocation::new_good_location)
     }
 
     pub fn description(&self) -> Option<String> {

@@ -74,6 +74,7 @@ impl Server {
                 .route("/profile/family", web::post().to(view::family_create_post))
                 .route("/shopping", web::get().to(view::shopping))
                 .route("/shopping/goods", web::post().to(view::good_create_post))
+                .route("/shopping/goods/{id}", web::get().to(view::good))
                 .route("/shopping/goods/{id}/edit", web::post().to(view::good_edit_post))
                 .route("/shopping/goods/{id}/delete", web::post().to(view::good_delete_post))
                 .route("/robots.txt", web::get().to(view::robots))

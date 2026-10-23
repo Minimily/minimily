@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/shopping">Shopping</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ good.name }}</li>
+{% endblock %}
+
+{% block content %}
+<h1 class="display-6">{{ good.name }}</h1>
+
+<div class="card">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">Name</dt>
+            <dd class="col-sm-9">{{ good.name }}</dd>
+
+            <dt class="col-sm-3">Description</dt>
+            <dd class="col-sm-9">
+                {% if good.description %}
+                    {{ good.description | escape | linebreaksbr | safe }}
+                {% else %}
+                    <span class="text-muted">No description</span>
+                {% endif %}
+            </dd>
+
+            <dt class="col-sm-3">Location</dt>
+            <dd class="col-sm-9">
+                {% if good.location %}
+                    {{ good.location.name }}
+                {% else %}
+                    <span class="text-muted">No location</span>
+                {% endif %}
+            </dd>
+
+            {% if good.user_group and good.user_group.name %}
+                <dt class="col-sm-3">Family</dt>
+                <dd class="col-sm-9">{{ good.user_group.name }}</dd>
+            {% endif %}
+
+            {% if good.created_by %}
+                <dt class="col-sm-3">Added by</dt>
+                <dd class="col-sm-9">{{ good.created_by.first_name }} {{ good.created_by.last_name }}</dd>
+            {% endif %}
+
+            <dt class="col-sm-3">Added on</dt>
+            <dd class="col-sm-9">{{ good.created_date | date(format="%B %e, %Y") }}</dd>
+        </dl>
+    </div>
+    <div class="card-footer">
+        <a href="/shopping" class="btn btn-secondary">Back to Shopping</a>
+    </div>
+</div>
+{% endblock %}

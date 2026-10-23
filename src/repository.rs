@@ -1,6 +1,6 @@
 use sqlx::{Error, PgConnection, Row};
 use sqlx::postgres::{PgRow, PgPool};
-use crate::model::{Good, UserGroup, GroupMember, GroupType, UserAccount};
+use crate::model::{Good, GoodLocation, UserGroup, GroupMember, GroupType, UserAccount};
 
 pub async fn num_user_accounts(conn: &PgPool) -> Result<i64, Error> {
     sqlx::query("select count(id) num from user_account")
@@ -167,9 +167,23 @@ fn row_to_good(row: &PgRow) -> Good {
         user_group: row.get::<Option<i32>, _>("user_group").map(UserGroup::new_user_group),
         name: row.get("name"),
         description: row.get("description"),
+        location: row.get::<Option<i32>, _>("location").map(GoodLocation::new_good_location),
         created_by: row.get::<Option<i32>, _>("created_by").map(UserAccount::new_user_account),
         created_date: row.get("created_date"),
     }
+}
+
+pub async fn get_good_locations(conn: &PgPool) -> Result<Vec<GoodLocation>, Error> {
+    sqlx::query("select * from good_location order by name")
+        .map(|row: PgRow| GoodLocation {
+            id: row.get("id"),
+            name: row.get("name"),
+            description: row.get("description"),
+            created_by: row.get::<Option<i32>, _>("created_by").map(UserAccount::new_user_account),
+            created_date: row.get("created_date"),
+        })
+        .fetch_all(conn)
+        .await
 }
 
 // Goods are visible to the user who created them and to the members of the group they belong to.
@@ -192,26 +206,43 @@ pub async fn get_goods(conn: &PgPool, user_account_id: i32) -> Result<Vec<Good>,
 
 pub async fn get_good(conn: &PgPool, id: i32, user_account_id: i32) -> Result<Good, Error> {
     sqlx::query(&format!("
-        select g.*
+        select g.*, ug.name as group_name, gl.name as location_name, ua.first_name, ua.last_name
         from good g
+            left join user_group ug on ug.id = g.user_group
+            left join good_location gl on gl.id = g.location
+            left join user_account ua on ua.id = g.created_by
         where g.id = $2 and {}
         ", GOOD_ACCESS))
         .bind(user_account_id)
         .bind(id)
-        .map(|row: PgRow| row_to_good(&row))
+        .map(|row: PgRow| {
+            let mut good = row_to_good(&row);
+            if let Some(user_group) = good.user_group.as_mut() {
+                user_group.name = row.get("group_name");
+            }
+            if let Some(location) = good.location.as_mut() {
+                location.name = row.get("location_name");
+            }
+            if let Some(created_by) = good.created_by.as_mut() {
+                created_by.first_name = row.get("first_name");
+                created_by.last_name = row.get("last_name");
+            }
+            good
+        })
         .fetch_one(conn)
         .await
 }
 
 pub async fn create_good(conn: &PgPool, good: &Good) -> Result<Good, Error> {
     sqlx::query("
-        insert into good (user_group, name, description, created_by)
-        values ($1, $2, $3, $4)
+        insert into good (user_group, name, description, location, created_by)
+        values ($1, $2, $3, $4, $5)
         returning *
         ")
         .bind(good.user_group.as_ref().map(|g| g.id))
         .bind(&good.name)
         .bind(&good.description)
+        .bind(good.location.as_ref().map(|l| l.id))
         .bind(good.created_by.as_ref().map(|ua| ua.id))
         .map(|row: PgRow| row_to_good(&row))
         .fetch_one(conn)
@@ -221,13 +252,14 @@ pub async fn create_good(conn: &PgPool, good: &Good) -> Result<Good, Error> {
 pub async fn update_good(conn: &PgPool, good: &Good, user_account_id: i32) -> Result<u64, Error> {
     let result = sqlx::query(&format!("
         update good g
-        set name = $3, description = $4
+        set name = $3, description = $4, location = $5
         where g.id = $2 and {}
         ", GOOD_ACCESS))
         .bind(user_account_id)
         .bind(good.id)
         .bind(&good.name)
         .bind(&good.description)
+        .bind(good.location.as_ref().map(|l| l.id))
         .execute(conn)
         .await?;
     Ok(result.rows_affected())

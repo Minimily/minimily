@@ -27,11 +27,12 @@
             <tbody>
                 {% for good in goods %}
                     <tr>
-                        <td>{{ good.name }}</td>
+                        <td><a href="/shopping/goods/{{ good.id }}">{{ good.name }}</a></td>
                         <td>{{ good.description | default(value="") }}</td>
                         <td class="text-end">
                             <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#good-modal"
-                                    data-good-id="{{ good.id }}" data-good-name="{{ good.name }}" data-good-description="{{ good.description | default(value="") }}">Edit</button>
+                                    data-good-id="{{ good.id }}" data-good-name="{{ good.name }}" data-good-description="{{ good.description | default(value="") }}"
+                                    data-good-location="{% if good.location %}{{ good.location.id }}{% endif %}">Edit</button>
                         </td>
                     </tr>
                 {% endfor %}
@@ -63,6 +64,16 @@
                         <textarea class="form-control" id="description" name="description" rows="3">{{ form.description | default(value="") }}</textarea>
                         <span class="error">{{ errors["description"] }}</span>
                     </div>
+                    <div class="mb-3">
+                        <label for="location" class="form-label">Location</label>
+                        <select class="form-select" id="location" name="location">
+                            <option value="">No location</option>
+                            {% for location in locations | default(value=[]) %}
+                                <option value="{{ location.id }}"{% if form.location and form.location == location.id | as_str %} selected{% endif %}>{{ location.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <span class="error">{{ errors["location"] }}</span>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="submit" form="good-delete-form" id="good-delete-button" class="btn btn-danger me-auto{% if not good_id %} d-none{% endif %}">Delete</button>
@@ -85,6 +96,7 @@
         var title = document.getElementById("good-modal-label");
         var name = document.getElementById("name");
         var description = document.getElementById("description");
+        var locationSelect = document.getElementById("location");
         var deleteForm = document.getElementById("good-delete-form");
         var deleteButton = document.getElementById("good-delete-button");
 
@@ -102,6 +114,7 @@
             deleteButton.classList.toggle("d-none", !goodId);
             name.value = goodId ? button.dataset.goodName : "";
             description.value = goodId ? button.dataset.goodDescription : "";
+            locationSelect.value = goodId ? button.dataset.goodLocation : "";
             form.querySelectorAll(".error").forEach(function (e) { e.textContent = ""; });
         });
 

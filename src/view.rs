@@ -204,6 +204,10 @@ async fn render_shopping(state: web::Data<AppState>, session: &Session, user_id:
             context.insert("error", "Unable to load the goods.");
         }
     }
+    match repository::get_good_locations(&state.pool).await {
+        Ok(locations) => context.insert("locations", &locations),
+        Err(e) => log::error!("Error retrieving good locations: {}", e)
+    }
     context.insert("good_id", &good_id);
     context.insert("form", form);
     context.insert("errors", errors);
@@ -251,6 +255,7 @@ pub async fn good_create_post(state: web::Data<AppState>, form: web::Form<GoodFo
         user_group,
         name: form.name.trim().to_string(),
         description: form.description(),
+        location: form.location(),
         created_by: Some(UserAccount::new_user_account(user_id)),
         created_date: None,
     };
@@ -258,6 +263,25 @@ pub async fn good_create_post(state: web::Data<AppState>, form: web::Form<GoodFo
         log::error!("Error creating good: {}", e);
     }
     Either::Left(web::Redirect::to("/shopping").see_other())
+}
+
+pub async fn good(state: web::Data<AppState>, path: web::Path<i32>, session: Session) -> impl Responder {
+    let mut context = template::create_context(&session);
+
+    let user_id = match session.get::<i32>("id") {
+        Ok(Some(id)) => id,
+        _ => return Either::Left(web::Redirect::to("/signin").see_other()),
+    };
+
+    match repository::get_good(&state.pool, path.into_inner(), user_id).await {
+        Ok(good) => context.insert("good", &good),
+        Err(e) => {
+            log::error!("Error retrieving good: {}", e);
+            return Either::Left(web::Redirect::to("/shopping").see_other());
+        }
+    }
+
+    Either::Right(respond_with_template(state, context, "good.html"))
 }
 
 pub async fn good_edit_post(state: web::Data<AppState>, path: web::Path<i32>, form: web::Form<GoodForm>, session: Session) -> impl Responder {
@@ -278,6 +302,7 @@ pub async fn good_edit_post(state: web::Data<AppState>, path: web::Path<i32>, fo
         user_group: None,
         name: form.name.trim().to_string(),
         description: form.description(),
+        location: form.location(),
         created_by: None,
         created_date: None,
     };
