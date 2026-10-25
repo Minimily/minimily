@@ -236,8 +236,8 @@ fn shopping_url(location_id: Option<i32>) -> String {
 // Renders the shopping page with empty good and location forms, unless form_context brings a submitted one.
 async fn render_shopping(state: web::Data<AppState>, session: &Session, user_id: i32, location_filter: Option<i32>, form_context: Context) -> HttpResponse {
     let mut context = template::create_context(session);
-
     context.insert("location_filter", &location_filter);
+
     match repository::get_goods(&state.pool, user_id, location_filter).await {
         Ok(goods) => context.insert("goods", &goods),
         Err(e) => {
@@ -245,6 +245,7 @@ async fn render_shopping(state: web::Data<AppState>, session: &Session, user_id:
             context.insert("error", "Unable to load the goods.");
         }
     }
+    
     match repository::get_good_locations(&state.pool, user_id).await {
         Ok(locations) => context.insert("locations", &locations),
         Err(e) => {
