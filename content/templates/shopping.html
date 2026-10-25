@@ -92,47 +92,7 @@
     {% endif %}
 </div>
 
-<div class="modal fade" id="good-modal" tabindex="-1" aria-labelledby="good-modal-label" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form id="good-form" method="post" action="{% if good_id %}/shopping/goods/{{ good_id }}/edit{% else %}/shopping/goods{% endif %}" enctype="application/x-www-form-urlencoded">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="good-modal-label">{% if good_id %}Edit Good{% else %}Add Good{% endif %}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="name" class="form-label">Name *</label>
-                        <input type="text" class="form-control" id="name" name="name" maxlength="100" value="{{ good_form.name }}" required>
-                        <span class="error">{{ good_errors["name"] }}</span>
-                    </div>
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea class="form-control" id="description" name="description" rows="3">{{ good_form.description | default(value="") }}</textarea>
-                        <span class="error">{{ good_errors["description"] }}</span>
-                    </div>
-                    <div class="mb-3">
-                        <label for="location" class="form-label">Location</label>
-                        <select class="form-select" id="location" name="location">
-                            <option value="">No location</option>
-                            {% for location in locations | default(value=[]) %}
-                                <option value="{{ location.id }}"{% if good_form.location and good_form.location == location.id | as_str %} selected{% endif %}>{{ location.name }}</option>
-                            {% endfor %}
-                        </select>
-                        <span class="error">{{ good_errors["location"] }}</span>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" form="good-delete-form" id="good-delete-button" class="btn btn-danger me-auto{% if not good_id %} d-none{% endif %}">Delete</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save</button>
-                </div>
-            </form>
-            <!-- Forms can't be nested, so the delete form sits outside and the Delete button points to it. -->
-            <form id="good-delete-form" method="post" action="{% if good_id %}/shopping/goods/{{ good_id }}/delete{% endif %}" onsubmit="return confirm('Delete this good?');"></form>
-        </div>
-    </div>
-</div>
+{% include "good_modal.html" %}
 
 <div class="modal fade" id="location-modal" tabindex="-1" aria-labelledby="location-modal-label" aria-hidden="true">
     <div class="modal-dialog">
@@ -175,8 +135,6 @@
         var name = document.getElementById("name");
         var description = document.getElementById("description");
         var locationSelect = document.getElementById("location");
-        var deleteForm = document.getElementById("good-delete-form");
-        var deleteButton = document.getElementById("good-delete-button");
 
         // Opened by a button: switch between adding and editing, based on the button that was clicked.
         modal.addEventListener("show.bs.modal", function (event) {
@@ -188,8 +146,6 @@
             var goodId = button.dataset.goodId;
             form.action = goodId ? "/shopping/goods/" + goodId + "/edit" : "/shopping/goods";
             title.textContent = goodId ? "Edit Good" : "Add Good";
-            deleteForm.action = goodId ? "/shopping/goods/" + goodId + "/delete" : "";
-            deleteButton.classList.toggle("d-none", !goodId);
             name.value = goodId ? button.dataset.goodName : "";
             description.value = goodId ? button.dataset.goodDescription : "";
             locationSelect.value = goodId ? button.dataset.goodLocation : "{% if location_filter %}{{ location_filter }}{% endif %}";

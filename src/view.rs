@@ -309,23 +309,42 @@ pub async fn good_create_post(state: web::Data<AppState>, form: web::Form<GoodFo
     Either::Left(web::Redirect::to(shopping_url(good.location.map(|l| l.id))).see_other())
 }
 
-pub async fn good(state: web::Data<AppState>, path: web::Path<i32>, session: Session) -> impl Responder {
-    let mut context = template::create_context(&session);
+// Renders the good's page with its edit form filled with the good, unless form_context brings a submitted one.
+async fn render_good(state: web::Data<AppState>, session: &Session, user_id: i32, good_id: i32, form_context: Context) -> Either<web::Redirect, HttpResponse> {
+    let mut context = template::create_context(session);
 
-    let user_id = match session.get::<i32>("id") {
-        Ok(Some(id)) => id,
-        _ => return Either::Left(web::Redirect::to("/signin").see_other()),
-    };
-
-    match repository::get_good(&state.pool, path.into_inner(), user_id).await {
-        Ok(good) => context.insert("good", &good),
+    match repository::get_good(&state.pool, good_id, user_id).await {
+        Ok(good) => {
+            let good_form = GoodForm::from_good(&good);
+            context.extend(good_form_context(Some(good_id), &good_form, &good_form.get_errors()));
+            context.insert("good", &good);
+        }
         Err(e) => {
             log::error!("Error retrieving good: {}", e);
             return Either::Left(web::Redirect::to("/shopping").see_other());
         }
     }
 
+    match repository::get_good_locations(&state.pool, user_id).await {
+        Ok(locations) => context.insert("locations", &locations),
+        Err(e) => {
+            log::error!("Error retrieving good locations: {}", e);
+            context.insert("error", "Unable to load the locations.");
+        }
+    }
+
+    context.extend(form_context);
+
     Either::Right(respond_with_template(state, context, "good.html"))
+}
+
+pub async fn good(state: web::Data<AppState>, path: web::Path<i32>, session: Session) -> impl Responder {
+    let user_id = match session.get::<i32>("id") {
+        Ok(Some(id)) => id,
+        _ => return Either::Left(web::Redirect::to("/signin").see_other()),
+    };
+
+    render_good(state, &session, user_id, path.into_inner(), Context::new()).await
 }
 
 pub async fn good_edit_post(state: web::Data<AppState>, path: web::Path<i32>, form: web::Form<GoodForm>, session: Session) -> impl Responder {
@@ -338,6 +357,9 @@ pub async fn good_edit_post(state: web::Data<AppState>, path: web::Path<i32>, fo
     let form = form.into_inner();
     let (valid, errors) = form.validate();
     if !valid {
+        if form.returns_to_good() {
+            return render_good(state, &session, user_id, good_id, good_form_context(Some(good_id), &form, &errors)).await;
+        }
         return Either::Right(render_shopping(state, &session, user_id, form.location().map(|l| l.id), good_form_context(Some(good_id), &form, &errors)).await);
     }
 
@@ -352,6 +374,9 @@ pub async fn good_edit_post(state: web::Data<AppState>, path: web::Path<i32>, fo
     };
     if let Err(e) = repository::update_good(&state.pool, &good, user_id).await {
         log::error!("Error updating good: {}", e);
+    }
+    if form.returns_to_good() {
+        return Either::Left(web::Redirect::to(format!("/shopping/goods/{}", good_id)).see_other());
     }
     Either::Left(web::Redirect::to(shopping_url(good.location.map(|l| l.id))).see_other())
 }

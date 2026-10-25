@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use bcrypt::{hash, DEFAULT_COST};
 use chrono::{NaiveDate};
-use crate::model::{AppState, GoodLocation, UserAccount};
+use crate::model::{AppState, Good, GoodLocation, UserAccount};
 use crate::repository;
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
@@ -192,9 +192,24 @@ pub struct GoodForm {
     pub name: String,
     pub description: Option<String>,
     pub location: Option<String>,
+    // Set to "good" when the form is submitted from the good's page, so we return there.
+    pub return_to: Option<String>,
 }
 
 impl GoodForm {
+    pub fn from_good(good: &Good) -> Self {
+        GoodForm {
+            name: good.name.clone(),
+            description: good.description.clone(),
+            location: good.location.as_ref().map(|l| l.id.to_string()),
+            return_to: Some("good".to_string()),
+        }
+    }
+
+    pub fn returns_to_good(&self) -> bool {
+        self.return_to.as_deref() == Some("good")
+    }
+
     pub fn get_errors(&self) -> HashMap<&str, String> {
         HashMap::from([
             ("name", "".to_string()),

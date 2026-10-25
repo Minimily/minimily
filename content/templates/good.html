@@ -8,6 +8,12 @@
 {% block content %}
 <h1 class="display-6">{{ good.name }}</h1>
 
+{% if error %}
+    <div class="alert alert-warning" role="alert">
+        {{ error }}
+    </div>
+{% endif %}
+
 <div class="card">
     <div class="card-body">
         <dl class="row mb-0">
@@ -46,8 +52,37 @@
             <dd class="col-sm-9">{{ good.created_date | date(format="%B %e, %Y") }}</dd>
         </dl>
     </div>
-    <div class="card-footer">
+    <div class="card-footer d-flex gap-2">
         <a href="/shopping{% if good.location %}?location={{ good.location.id }}{% endif %}" class="btn btn-secondary">Back to Shopping</a>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#good-modal">Edit</button>
+        <form method="post" action="/shopping/goods/{{ good.id }}/delete" onsubmit="return confirm('Delete this good?');">
+            <button type="submit" class="btn btn-danger">Delete</button>
+        </form>
     </div>
 </div>
+
+{% include "good_modal.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        var modal = document.getElementById("good-modal");
+        var form = document.getElementById("good-form");
+
+        // Cancelling discards unsaved changes, so the next opening shows the good as it is.
+        modal.addEventListener("hidden.bs.modal", function () {
+            form.reset();
+            form.querySelectorAll(".error").forEach(function (e) { e.textContent = ""; });
+        });
+
+        modal.addEventListener("shown.bs.modal", function () {
+            document.getElementById("name").focus();
+        });
+
+        {% if show_good_modal %}
+            bootstrap.Modal.getOrCreateInstance(modal).show();
+        {% endif %}
+    });
+</script>
 {% endblock %}
