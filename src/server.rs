@@ -5,8 +5,8 @@ use actix_web::{web, App, HttpServer};
 use actix_web::cookie::Key;
 use actix_web::middleware::Logger;
 use crate::config::Config;
-use crate::model::AppState;
-use crate::view;
+use crate::state::AppState;
+use crate::{account, shopping, view};
 
 pub struct Server {
     port: u16,
@@ -63,23 +63,8 @@ impl Server {
                 )
                 .service(fs::Files::new("/assets", "./content/static/assets").show_files_listing())
                 .route("/", web::get().to(view::home))
-                .route("/signup", web::get().to(view::sign_up))
-                .route("/signup", web::post().to(view::sign_up_post))
-                .route("/signin", web::get().to(view::sign_in))
-                .route("/signin", web::post().to(view::sign_in_post))
-                .route("/signout", web::post().to(view::sign_out))
-                .route("/profile", web::get().to(view::profile))
-                .route("/profile/edit", web::get().to(view::profile_edit))
-                .route("/profile/edit", web::post().to(view::profile_edit_post))
-                .route("/profile/family", web::post().to(view::family_create_post))
-                .route("/shopping", web::get().to(view::shopping))
-                .route("/shopping/goods", web::post().to(view::good_create_post))
-                .route("/shopping/goods/{id}", web::get().to(view::good))
-                .route("/shopping/goods/{id}/edit", web::post().to(view::good_edit_post))
-                .route("/shopping/goods/{id}/delete", web::post().to(view::good_delete_post))
-                .route("/shopping/locations", web::post().to(view::location_create_post))
-                .route("/shopping/locations/{id}/edit", web::post().to(view::location_edit_post))
-                .route("/shopping/locations/{id}/delete", web::post().to(view::location_delete_post))
+                .configure(account::routes::configure)
+                .configure(shopping::routes::configure)
                 .route("/robots.txt", web::get().to(view::robots))
                 .route("/health", web::get().to(view::health_check))
                 .default_service(web::route().to(view::not_found))

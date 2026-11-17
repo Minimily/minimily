@@ -1,7 +1,8 @@
 use tera::Context;
-use crate::model::{AppState, UserAccount};
-use crate::form::{SignInForm, SignUpForm};
-use crate::{repository};
+use crate::account::model::UserAccount;
+use crate::account::form::{SignInForm, SignUpForm};
+use crate::account::repository;
+use crate::state::AppState;
 
 pub async fn handle_sign_up(state: &AppState, form: Option<SignUpForm>, mut context: Context) -> (Context, Option<UserAccount>) {
     match form {

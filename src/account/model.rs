@@ -1,17 +1,4 @@
 use chrono::{NaiveDate, NaiveDateTime};
-use sqlx::{PgPool};
-use tera::Tera;
-
-pub struct AppState {
-    pub pool: PgPool,
-    pub template: Tera,
-}
-
-impl AppState {
-    pub fn new(pool: PgPool, template: Tera) -> Self {
-        AppState { pool, template }
-    }
-}
 
 #[derive(serde::Serialize, Clone)]
 pub struct UserAccount {
@@ -97,36 +84,4 @@ pub struct GroupMember {
     pub user_account: Option<UserAccount>,
     pub created_by: Option<UserAccount>,
     pub created_date: Option<NaiveDateTime>,
-}
-
-#[derive(serde::Serialize, Clone)]
-pub struct Good {
-    pub id: i32,
-    pub user_group: Option<UserGroup>,
-    pub name: String,
-    pub description: Option<String>,
-    pub location: Option<GoodLocation>,
-    pub created_by: Option<UserAccount>,
-    pub created_date: Option<NaiveDateTime>,
-}
-
-#[derive(serde::Serialize, Clone)]
-pub struct GoodLocation {
-    pub id: i32,
-    pub name: Option<String>,
-    pub description: Option<String>,
-    pub created_by: Option<UserAccount>,
-    pub created_date: Option<NaiveDateTime>,
-}
-
-impl GoodLocation {
-    pub fn new_good_location(id: i32) -> Self {
-        GoodLocation {
-            id,
-            name: None,
-            description: None,
-            created_by: None,
-            created_date: None,
-        }
-    }
 }

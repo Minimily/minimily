@@ -5,7 +5,7 @@ use env_logger::Env;
 use sqlx::{migrate, PgPool};
 use tera::Tera;
 use minimily::config::{load_config, Config};
-use minimily::model::AppState;
+use minimily::state::AppState;
 use minimily::server::{Server};
 use minimily::template;
 
