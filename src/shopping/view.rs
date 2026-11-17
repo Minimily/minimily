@@ -76,7 +76,7 @@ async fn render_shopping(state: web::Data<AppState>, session: &Session, user_id:
     context.extend(location_form_context(None, &location_form, &location_form.get_errors()));
     context.extend(form_context);
 
-    respond_with_template(state, context, "shopping.html")
+    respond_with_template(state, context, "shopping/shopping.html")
 }
 
 pub async fn shopping(state: web::Data<AppState>, filter: web::Query<ShoppingFilter>, session: Session) -> impl Responder {
@@ -151,7 +151,7 @@ async fn render_good(state: web::Data<AppState>, session: &Session, user_id: i32
 
     context.extend(form_context);
 
-    Either::Right(respond_with_template(state, context, "good.html"))
+    Either::Right(respond_with_template(state, context, "shopping/good.html"))
 }
 
 pub async fn good(state: web::Data<AppState>, path: web::Path<i32>, session: Session) -> impl Responder {

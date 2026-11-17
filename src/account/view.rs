@@ -12,7 +12,7 @@ use crate::template::respond_with_template;
 pub async fn sign_up(state: web::Data<AppState>, session: Session) -> impl Responder {
     let context = template::create_context(&session);
     let (context, _user_account) = handle_sign_up(state.get_ref(), None, context).await;
-    respond_with_template(state, context, "signup.html")
+    respond_with_template(state, context, "account/signup.html")
 }
 
 pub async fn sign_up_post(state: web::Data<AppState>, form: web::Form<SignUpForm>, session: Session) -> impl Responder {
@@ -20,8 +20,8 @@ pub async fn sign_up_post(state: web::Data<AppState>, form: web::Form<SignUpForm
     let (context, user_account) = handle_sign_up(state.get_ref(), Some(form.into_inner()), context).await;
 
     match user_account {
-        Some(_) => respond_with_template(state, context, "signup_ok.html"),
-        None => respond_with_template(state, context, "signup.html")
+        Some(_) => respond_with_template(state, context, "account/signup_ok.html"),
+        None => respond_with_template(state, context, "account/signup.html")
     }
 }
 
@@ -40,7 +40,7 @@ pub async fn sign_in(state: web::Data<AppState>, session: Session) -> Either<web
     
     let context = template::create_context(&session);
     let (context, _user_account) = handle_sign_in(state.get_ref(), None, context).await;
-    Either::Right(respond_with_template(state, context, "signin.html"))
+    Either::Right(respond_with_template(state, context, "account/signin.html"))
 }
 
 pub async fn sign_in_post(state: web::Data<AppState>, form: web::Form<SignInForm>, session: Session) -> impl Responder {
@@ -57,7 +57,7 @@ pub async fn sign_in_post(state: web::Data<AppState>, form: web::Form<SignInForm
         None => context.insert("error", "These credentials don't match your account. Please, try again."),
     }
 
-    Either::Right(respond_with_template(state, context.clone(), "signin.html"))
+    Either::Right(respond_with_template(state, context.clone(), "account/signin.html"))
 }
 
 pub async fn sign_out(session: Session) -> impl Responder {
@@ -96,7 +96,7 @@ pub async fn profile(state: web::Data<AppState>, session: Session) -> impl Respo
     else {
         return Either::Left(web::Redirect::to("/").see_other())
     }
-    Either::Right(respond_with_template(state, context, "profile.html"))
+    Either::Right(respond_with_template(state, context, "account/profile.html"))
 }
 
 pub async fn profile_edit(state: web::Data<AppState>, session: Session) -> impl Responder {
@@ -126,7 +126,7 @@ pub async fn profile_edit(state: web::Data<AppState>, session: Session) -> impl 
         }
     }
 
-    Either::Right(respond_with_template(state, context, "profile_edit.html"))
+    Either::Right(respond_with_template(state, context, "account/profile_edit.html"))
 }
 
 pub async fn profile_edit_post(state: web::Data<AppState>, form: web::Form<EditProfileForm>, session: Session) -> impl Responder {
@@ -174,7 +174,7 @@ pub async fn profile_edit_post(state: web::Data<AppState>, form: web::Form<EditP
         context.insert("form", &form);
     }
 
-    Either::Right(respond_with_template(state, context, "profile_edit.html"))
+    Either::Right(respond_with_template(state, context, "account/profile_edit.html"))
 }
 
 pub async fn family_create_post(state: web::Data<AppState>, form: web::Form<CreateFamilyForm>, session: Session) -> web::Redirect {
