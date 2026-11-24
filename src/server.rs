@@ -1,12 +1,12 @@
+use crate::config::Config;
+use crate::state::AppState;
+use crate::{account, knowledge, shopping, view};
 use actix_files as fs;
 use actix_session::SessionMiddleware;
 use actix_session::storage::CookieSessionStore;
-use actix_web::{web, App, HttpServer};
 use actix_web::cookie::Key;
 use actix_web::middleware::Logger;
-use crate::config::Config;
-use crate::state::AppState;
-use crate::{account, shopping, view};
+use actix_web::{App, HttpServer, web};
 
 pub struct Server {
     port: u16,
@@ -19,7 +19,9 @@ impl Server {
         let session_key = config.session.secrete_key.as_bytes();
 
         let secret_key = if session_key.len() < 64 {
-            log::warn!("SESSION_SECRET_KEY is too short (min 64 bytes). Generating a temporary random key.");
+            log::warn!(
+                "SESSION_SECRET_KEY is too short (min 64 bytes). Generating a temporary random key."
+            );
             Key::generate()
         } else {
             Key::from(session_key)
@@ -34,20 +36,20 @@ impl Server {
 
     pub async fn run(&self, state: AppState) -> std::io::Result<()> {
         /*
-        * app_state holds a PgConnection instance that is not cloneable, but
-        * actix-web requires it to be cloneable. To solve this problem we use
-        * web::Data to wrap the app_state in an Atomic Reference Counted
-        * pointer, so each instance of the application gets a pointer, not a
-        * raw copy.
-        */
+         * app_state holds a PgConnection instance that is not cloneable, but
+         * actix-web requires it to be cloneable. To solve this problem we use
+         * web::Data to wrap the app_state in an Atomic Reference Counted
+         * pointer, so each instance of the application gets a pointer, not a
+         * raw copy.
+         */
         let app_state = web::Data::new(state);
         let secret_key = self.session_secret_key.clone();
         let secure = self.session_secure.clone();
 
         /*
-        * actix-web will spin up a worker process for each available core. Each
-        * worker runs its own copy of the application.
-        */
+         * actix-web will spin up a worker process for each available core. Each
+         * worker runs its own copy of the application.
+         */
         HttpServer::new(move || {
             let worker_key = secret_key.clone();
             let worker_secure = secure.clone();
@@ -59,20 +61,21 @@ impl Server {
                         .cookie_name("minimily-session".to_string())
                         .cookie_secure(worker_secure)
                         .cookie_http_only(true)
-                        .build()
+                        .build(),
                 )
                 .service(fs::Files::new("/assets", "./content/static/assets").show_files_listing())
                 .route("/", web::get().to(view::home))
                 .configure(account::routes::configure)
                 .configure(shopping::routes::configure)
+                .configure(knowledge::routes::configure)
                 .route("/robots.txt", web::get().to(view::robots))
                 .route("/health", web::get().to(view::health_check))
                 .default_service(web::route().to(view::not_found))
                 .app_data(app_state.clone())
         })
-            .workers(1)
-            .bind(("0.0.0.0", self.port))?
-            .run()
-            .await
+        .workers(1)
+        .bind(("0.0.0.0", self.port))?
+        .run()
+        .await
     }
 }
