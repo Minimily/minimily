@@ -1,7 +1,7 @@
 use actix_session::Session;
 use actix_web::{web, HttpResponse};
 use tera::{Context, Tera};
-use crate::model::AppState;
+use crate::state::AppState;
 
 fn filter_format_phone(value: &tera::Value, _args: &std::collections::HashMap<String, tera::Value>) -> tera::Result<tera::Value> {
     let phone = tera::try_get_value!("format_phone", "value", String, value);
